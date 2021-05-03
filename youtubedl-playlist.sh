@@ -6,7 +6,7 @@
 echo "1) Download ordered video playlist"
 echo "2) Download ordered audio playlist"
 echo -n "> "
-read format
+read form
 echo -n "Enter target directory: "
 read dir
 echo -n "Enter Youtube URL: "
@@ -18,9 +18,9 @@ if [ "${dir: -1}" != "/" ]; then
 fi
 
 #Running download with youtube-dl
-if [ $format == "1" ]; then
+if [ "$form" == "1" ]; then
   youtube-dl --add-header 'Cookie:' -o "$dir%(playlist_index)s. %(title)s.%(ext)s" "$url"
-elif [ $format == "2" ]; then
+elif [ "$form" == "2" ]; then
   youtube-dl --add-header 'Cookie:' -xo "$dir%(playlist_index)s. %(title)s.%(ext)s" "$url"
 else
   echo "Invalid input!"

@@ -6,13 +6,13 @@
 echo "1) Backup desktop"
 echo "2) Backup laptop"
 echo -n "> "
-read backup
+read dev
 
 #Running backup with rsync
-if [ $backup == "1" ]; then
+if [ "$dev" == "1" ]; then
   rsync -aHAXv --del / --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
   /mnt/desktop-backup/
-elif [ $backup == "2" ]; then
+elif [ "$dev" == "2" ]; then
   rsync -aHAXv --del / --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found"} \
   /mnt/laptop-backup/
 else
