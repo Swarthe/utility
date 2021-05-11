@@ -14,7 +14,7 @@ read url
 
 #Target directory correction
 if [ "${dir: -1}" != "/" ]; then
-  "dir"+="/"
+  dir+="/"
 fi
 
 #Running download with youtube-dl
