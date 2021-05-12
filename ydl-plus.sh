@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-#Download batch of videos from Youtube with clean filenames
+#Download video or audio from Youtube with clean filenames
 
 #User prompt
-echo "1) Download video playlist"
-echo "2) Download audio playlist"
+echo "1) Download video"
+echo "2) Download audio"
 echo -n "> "
 read form
 echo -n "Enter target directory: "
