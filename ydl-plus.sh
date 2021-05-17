@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#Download video or audio from Youtube with clean filenames
+#Download video or audio with youtube-dl and extra features
 
 #User prompt
 echo "1) Download video"
@@ -17,7 +17,7 @@ if [ "${dir: -1}" != "/" ]; then
   dir+="/"
 fi
 
-#Running download with youtube-dl
+#Running download
 if [ "$form" == "1" ]; then
   youtube-dl --add-header 'Cookie:' -o "$dir%(title)s.%(ext)s" "$url"
 elif [ "$form" == "2" ]; then
