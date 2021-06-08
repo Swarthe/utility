@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-
-# Record display and audio with ffmpeg and extra features
+#
+# Record the display with ffmpeg and extra features.
 
 # Prompt user
 echo "1) Record with desktop audio"
@@ -14,11 +14,17 @@ read fps
 res=$(xdpyinfo | awk '/dimensions/{print $2}')
 
 # Record display
-if [ "$src" == "1" ]; then
-  ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i pulseeffects_sink out.mkv
-elif [ "$src" == "2" ]; then
-  ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i pulseeffects_source out.mkv
-else
-  echo "Invalid input!"
-  exit 1
-fi
+case $src in
+    1) 
+        ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+        pulseeffects_sink out.mkv
+        ;;
+    2) 
+        ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+        pulseeffects_source out.mkv
+        ;;
+    *) 
+        echo "Invalid input!"
+        exit 1
+        ;;
+esac

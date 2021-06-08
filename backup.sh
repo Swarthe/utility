@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
+#
+# Backup the filesystem to an external hard drive with rsync.
 
-#Backup filesystem to external hard drive with rsync
-
-#User prompt
+# Prompt user
 echo "1) Backup desktop"
 echo "2) Backup laptop"
 echo -n "> "
 read dev
 
-#Running backup
-if [ "$dev" == "1" ]; then
-  rsync -aHAXv --del / --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
-  /mnt/desktop-backup/
-elif [ "$dev" == "2" ]; then
-  rsync -aHAXv --del / --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found"} \
-  /mnt/laptop-backup/
-else
-  echo "Invalid input!"
-  exit 1
-fi
+# Run backup
+case $dev in
+    1)
+        rsync -aHAXv --del / \
+        --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
+        /mnt/desktop-backup/
+        ;;
+    2)
+        rsync -aHAXv --del / \
+        --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found"} \
+        /mnt/laptop-backup/
+        ;;
+    *)
+        echo "Invalid input!"
+        exit 1
+        ;;
+esac

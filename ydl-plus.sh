@@ -1,28 +1,32 @@
 #!/usr/bin/env bash
+#
+# Download media with youtube-dl and extra features.
 
-#Download video or audio with youtube-dl and extra features
-
-#User prompt
+# Prompt user
 echo "1) Download video"
 echo "2) Download audio"
 echo -n "> "
 read form
 echo -n "Enter target directory: "
 read dir
-echo -n "Enter Youtube URL: "
+echo -n "Enter URL: "
 read url
 
-#Target directory correction
+# Correct target directory if necessary
 if [ "${dir: -1}" != "/" ]; then
-  dir+="/"
+    dir+="/"
 fi
 
-#Running download
-if [ "$form" == "1" ]; then
-  youtube-dl --add-header 'Cookie:' -o "$dir%(title)s.%(ext)s" "$url"
-elif [ "$form" == "2" ]; then
-  youtube-dl --add-header 'Cookie:' -xo "$dir%(title)s.%(ext)s" "$url"
-else
-  echo "Invalid input!"
-  exit 1
-fi
+# Download media
+case $form in 
+    1)
+        youtube-dl --add-header 'Cookie:' -o "$dir%(title)s.%(ext)s" "$url"
+        ;;
+    2)
+        youtube-dl --add-header 'Cookie:' -xo "$dir%(title)s.%(ext)s" "$url"
+        ;;
+    *)
+        echo "Invalid input!"
+        exit 1
+        ;;
+esac
