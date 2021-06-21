@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 #
 # Record the display with ffmpeg and extra features.
+#
 
+#
 # Prompt user
+#
 echo "1) Record display with desktop audio"
 echo "2) Record display with microphone audio"
 echo "3) Record microphone audio"
@@ -14,12 +17,16 @@ if [ $src != 3 ]; then
     read fps
 fi
 
+#
 # Determine resolution if needed
+#
 if [ $src != 3 ]; then
     res=$(xdpyinfo | awk '/dimensions/{print $2}')
 fi
 
+#
 # Record display
+#
 case $src in
     1) 
         ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
