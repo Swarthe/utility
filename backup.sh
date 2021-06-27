@@ -1,37 +1,46 @@
 #!/usr/bin/env bash
 #
-# Backup the filesystem to an external location using rsync, with safety checks
-# and intelligent target deduction.
+# Backup the filesystem to an external location using rsync with safety checks,
+# intelligent target deduction and succint output.
 #
 
 # todo
 # 
-# experimental macos support (ex: dir exclusions if needed, colour escape codes) with uname and get it tested
-# test thoroughly on linux, and backup desktop to make sure config and messages and checks work properly (especially free space check)
+# experimental macos support (ex: dir exclusions if needed, colour escape codes, utilities used) with uname and get it tested
+# test thoroughly on linux, and backup desktop to make sure config and messages and checks work properly (especially free space check and drive model and latest mounted deduction)
 # add mention of config file at ~/.config/utilitysh/backup.conf and what it should contain, probably in help text
 # add comment that this program is intended to support all FHS compliant systems
 # add method of detecting and notifing user of rsync quitting before finishing backup (see commented code)
 # make comments proper
 
 #
-# User message functions 
+# User I/O functions 
 #
 err () {
-    echo -e "\e[31merror:\033[0m $*" >&2
+    echo -e "\e[1;31merror:\033[0m $*" >&2
 }
 
 warn () {
-    echo -e "\e[33mwarning:\033[0m $*"
+    echo -e "\e[1;33mwarn:\033[0m $*"
 }
 
-inf () {
-    echo -e "\e[32mbackup:\033[0m $*" 
+info () {
+    echo -e "\e[1;34minfo:\033[0m $*" 
+}
+
+conf () {
+    local confirm=0
+    until [ "$confirm" = "y" -o "$confirm" = "n" -o -z "$confirm" ]; do
+        echo -ne "\e[1;36m::\e[0m $* [y/n] "
+        read confirm
+    done
+    [ "$confirm" != "y" -a ! -z "$confirm" ] && exit
 }
 
 #
 # Act on options
 #
-while getopts :hlst: opt; do
+while getopts :hlist: opt; do
     case "${opt}" in
         h) 
             echo "Usage: backup [OPTION] [TARGET]"
@@ -40,8 +49,9 @@ while getopts :hlst: opt; do
             echo "Unless manually set, intelligently determine the target."
             echo
             echo "  -l    log to file instead of stdout"
-            echo "  -s    skip all checks (use at your own peril)"
+            echo "  -i    use interactive checks"
             echo "  -t    specify target for the backup"
+            echo "  -s    skip confirmation (use at your own peril)"
             echo "  -h    display this help text"
             echo
             echo "Example: backup -lt /mnt/backup/"
@@ -50,20 +60,23 @@ while getopts :hlst: opt; do
         l)
             log=1
             ;;
-        s)
-            skip=1
+        i)
+            interact=1
             ;;
         t)
-            targ="$OPTARG"
+            targ="$(realpath "$OPTARG")"
+            
+            ;;
+        s)
             skip_confirm=1
             ;;
         :)
-            err "option '$OPTARG' requires an argument"
+            err "Option '$OPTARG' requires an argument"
             echo "Try 'backup -h' for more information."
             exit 1
             ;;
         \?)
-            err "invalid option '$OPTARG'"
+            err "Invalid option '$OPTARG'"
             echo "Try 'backup -h' for more information."
             exit 1
             ;;
@@ -71,78 +84,107 @@ while getopts :hlst: opt; do
 done
 
 #
-# Intelligently determine target unless manually set
+# Attempt to determine target unless manually set
 #
 if [ -z "$targ" ]; then
-    if [ -s "$(cat "$(grep "${SUDO_USER:-${USER}}" /etc/passwd \
-    | cut -d: -f6)/.config/utilitysh/backup.conf" 2> /dev/null)" ]; then
-        targ="$(cat "$(grep "${SUDO_USER:-${USER}}" /etc/passwd \
-        | cut -d: -f6)/.config/utilitysh/backup.conf" 2> /dev/null)"
-    elif [ -f /etc/mtab ]; then
-        targ="$(tail -n 1 /etc/mtab | awk '{print $2}')"
+    # use config file of non-root user
+    if [ -s "$(grep "${SUDO_USER:-${USER}}" /etc/passwd \
+    | cut -d: -f6)/.config/utilitysh/backup.conf" ]; then
+        targ="$(realpath "$(cat "$(grep "${SUDO_USER:-${USER}}" /etc/passwd \
+        | cut -d: -f6)/.config/utilitysh/backup.conf")")"
+    # use latest mounted non-tmpfs drive
+    elif [ "$(df --output=source | tail -n 1)" != "tmpfs" ]; then
+        targ="$(df --output=source | tail -n 1)"
     else
-        err "could not determine target; this system may be unsupported"
-        err "please contact the author of this program"
+        err "Could not determine a suitable target"
+        echo "Try 'backup -h' for more information."
         exit 1
     fi
 fi
 
 #
-# Checks
+# Run checks
 #
-ask () {
-    local confirm=0
-    until [ "$confirm" = "y" -o "$confirm" = "n" -o -z "$confirm" ]; do
-        echo -ne "\e[34m::\e[0m $* [y/n] "
-        read confirm
-    done
-    if [ "$confirm" != "y" -a ! -z "$confirm" ]; then
-        exit
-    fi
-}
+if [ -d "$targ" ]; then
+    # obtain model of target drive
+    target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME \
+    "$(df --output=source "$targ" | tail -n 1)")")"
+fi
 
-if [ -z "$skip" ]; then
+if [ -z "$interact" ]; then
     if [ $(id -u) != 0 ]; then
-        ask "Backup is not running as root. Proceed anyway?"
+        warn "We do not have root privileges"
     fi
-    if [ ! -d "$targ" -o ! -w "$targ" ]; then
-        ask "Target '$(lsblk -no MODEL)' is inaccessible. Proceed anyway?"
-        skip_free=1
-    fi
-    if [ $(df --output=source / | tail -n 1) \
-    = $(df --output=source "$targ" | tail -n 1) ]; then
-        ask "Target '$(lsblk -no MODEL)' is the root drive. Proceed anyway?"
-    fi
-    if [ -z "$skip_free" ]; then
+    if [ -d "$targ" -a -r "$targ" -a -w "$targ" ]; then
+        if [ $(df --output=source / | tail -n 1) \
+        = $(df --output=source "$targ" | tail -n 1) ]; then
+            warn "Target drive '$target_model' is the root drive"
+        fi
         if [ $(df --output=used -k / | tail -n 1) \
         -gt $(df --output=avail -k "$targ" | tail -n 1) ]; then
-            ask "Target '$(lsblk -no MODEL)' has insufficient free space. Proceed anyway?"
+            warn "Target drive '$target_model' has insufficient free space"
         fi
+    elif [ -d "$targ" ]; then
+        target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME \
+        "$(df --output=source "$targ" | tail -n 1)")")"
+        warn "Target '$targ' is inaccessible"
+    else
+        warn "Target '$targ' does not exist"
     fi
-    if [ -z "$skip_confirm" ]; then
-        ask "Backup to '$(lsblk -no MODEL)' at '$targ'?"
+else
+    if [ $(id -u) != 0 ]; then
+        conf "We do not have root privileges. Proceed anyway?"
+    fi
+    if [ -d "$targ" -a -r "$targ" -a -w "$targ" ]; then
+        if [ $(df --output=source / | tail -n 1) \
+        = $(df --output=source "$targ" | tail -n 1) ]; then
+            conf "Target drive '$target_model' is the root drive. Proceed anyway?"
+        fi
+        if [ $(df --output=used -k / | tail -n 1) \
+        -gt $(df --output=avail -k "$targ" | tail -n 1) ]; then
+            conf "Target drive '$target_model' has insufficient free space. Proceed anyway?"
+        fi
+    elif [ -d "$targ" ]; then
+        target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME \
+        "$(df --output=source "$targ" | tail -n 1)")")"
+        conf "Target '$targ' is inaccessible. Proceed anyway?"
+    else
+        conf "Target '$targ' does not exist. Proceed anyway?"
+    fi
+fi
+
+#
+# Confirm or announce target
+#
+if [ -z "$skip_confirm" ]; then
+    if [ -n "$target_model" ]; then
+        conf "Backup to '$targ' on '$target_model'?"
+    else
+        conf "Backup to '$targ'?"
+    fi
+else
+    if [ -n "$target_model" ]; then
+        info "Target is '$targ' on '$target_model'"
+    else
+        info "Target is '$targ'"
     fi
 fi
 
 #
 # Run backup
 #
-if [ -n "$skip" ]; then
-    warn "target is '$(lsblk -no MODEL)' at '$targ'"
-fi
-
 if [ -z "$log" ]; then
     rsync -aHAXv --del / \
     --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
     "$targ"
 else
-    inf "log file is '${PWD}/backup.log'"
+    info "Log file is '${PWD}/backup.log'"
     rsync -aHAXv --del / \
     --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
     "$targ" &> "backup.log" &
     while killall -q -0 rsync; do
         for i in / - \\ \|; do 
-            echo -ne "\r\e[K\e[32mbackup:\033[0m backup in progress $i"
+            echo -ne "\r\e[K\e[1;34minfo:\033[0m Backup in progress $i"
             sleep 0.1
         done
     done
@@ -150,6 +192,6 @@ else
     # if grep "rsync error" "$(tail -n 5 backup.log)"; then
     #     err "backup could not complete"
     # else
-        inf "backup complete"
+        info "Backup complete"
     # fi
 fi

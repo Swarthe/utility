@@ -12,7 +12,7 @@ echo "3) Record microphone audio"
 echo -n "> "
 read src
 
-if [ $src != 3 ]; then
+if [ "$src" != "3" ]; then
     echo -n "Enter target framerate: "
     read fps
 fi
@@ -20,8 +20,8 @@ fi
 #
 # Determine resolution if needed
 #
-if [ $src != 3 ]; then
-    res=$(xdpyinfo | awk '/dimensions/{print $2}')
+if [ "$src" != "3" ]; then
+    res="$(xdpyinfo | awk '/dimensions/{print $2}')"
 fi
 
 #
