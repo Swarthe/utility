@@ -1,7 +1,7 @@
 # utilitysh
 
 - To be used or modified as the reader pleases
-- Designed for GNU/Linux with *nix* portability in mind as per the table below
+- Designed for GNU/Linux with *nix portability in mind as per the table below
 
 | Script      | GNU/Linux | MacOS |
 | ----------- | :-------: | :---: |
