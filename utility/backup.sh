@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
 # Backup the filesystem to an external location using rsync with safety checks,
-# intelligent target deduction and succint output.
+# optionally automatic target deduction and succint output.
 #
 
 # todo
 # 
 # experimental macos support (ex: dir exclusions if needed, colour escape codes, utilities used) with uname and get it tested
 # test thoroughly on linux, and backup desktop to make sure config and messages and checks work properly (especially free space check and drive model and latest mounted deduction)
-# add mention of config file at ~/.config/utilitysh/backup.conf and what it should contain, probably in help text
+# add mention of config file at ~/.config/utility/backup.conf and what it should contain, probably in help text
 # add comment that this program is intended to support all FHS compliant systems
 # add method of detecting and notifing user of rsync quitting before finishing backup (see commented code or maybe use if statement around rsync command)
 # see first answer here for "killall" reminder: <https://superuser.com/questions/1607829/what-does-kill-usr1-1-do>
@@ -47,7 +47,7 @@ while getopts :hlist: opt; do
             echo "Usage: backup [OPTION] [TARGET]"
             echo "Backup the filesystem to an external location."
             echo
-            echo "Unless manually set, intelligently determine the target."
+            echo "Unless manually set, automatically determine the target."
             echo
             echo "  -l    log to file instead of stdout"
             echo "  -i    use interactive checks"
@@ -90,7 +90,7 @@ done
 if [ -z "$targ" ]; then
     # use config file of non-root user
     config="$(grep "${SUDO_USER:-${USER}}" /etc/passwd \
-    | cut -d: -f6)/.config/utilitysh/backup.conf" 
+    | cut -d: -f6)/.config/utility/backup.conf" 
     if [ -s "$config" ]; then
         targ="$(realpath "$(cat "$config")")"
     # use latest mounted non-tmpfs drive
