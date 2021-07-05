@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# Record the display with ffmpeg and extra features.
+# record: Record the display and desktop or microphone audio
+#
+# Licensed under the MIT License. See LICENSE.txt for more information.
 #
 
 #
@@ -12,15 +14,12 @@ echo "3) Record microphone audio"
 echo -n "> "
 read src
 
-if [ "$src" != "3" ]; then
-    echo -n "Enter target framerate: "
-    read fps
-fi
-
 #
 # Determine resolution if needed
 #
-if [ "$src" != "3" ]; then
+if [ "$src" = "1" -o "$src" = "2" ]; then
+    echo -n "Enter target framerate: "
+    read fps
     res="$(xdpyinfo | awk '/dimensions/{print $2}')"
 fi
 

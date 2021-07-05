@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# Download media with youtube-dl and extra features.
+# ydl-plus: Download media from the internet
+#
+# Licensed under the MIT License. See LICENSE.txt for more information.
 #
 
 #
@@ -20,9 +22,7 @@ read url
 #
 # Correct target directory if necessary
 #
-if [ "${dir: -1}" != "/" ]; then
-    dir+="/"
-fi
+[ "${dir: -1}" != "/" ] && dir+="/"
 
 #
 # Download media

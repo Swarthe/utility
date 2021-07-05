@@ -15,8 +15,8 @@ Utility scripts designed for GNU/Linux with *nix portability in mind as per the 
 
 ## status
 
-Status scripts intended to be displayed by other software, such as status bars.
+Status scripts intended to be displayed by other software, such as status bars. They may require significant modification in order to function as intended on other systems.
 
 ## License
 
-This project is licensed under the MIT license (see LICENSE.txt for more information).
+Licensed under the MIT license. See `LICENSE.txt` for more information.
