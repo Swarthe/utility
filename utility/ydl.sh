@@ -2,6 +2,7 @@
 #
 # ydl-plus: Download media from the internet
 #
+# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.
 #
 
@@ -11,28 +12,25 @@
 echo "1) Download video"
 echo "2) Download audio"
 echo -n "> "
-read form
+read type
 
 echo -n "Enter target directory: "
-read dir
+read target
+# add leading slash to avoid breaking youtube-dl
+[ -n "$target" ] && target+="/"
 
 echo -n "Enter URL: "
 read url
 
 #
-# Correct target directory if necessary
-#
-[ "${dir: -1}" != "/" ] && dir+="/"
-
-#
 # Download media
 #
-case $form in 
+case $type in 
     1)
-        youtube-dl --add-header 'Cookie:' -o "$dir%(title)s.%(ext)s" "$url"
+        youtube-dl --add-header 'Cookie:' -o "${target}%(title)s.%(ext)s" "$url"
         ;;
     2)
-        youtube-dl --add-header 'Cookie:' -xo "$dir%(title)s.%(ext)s" "$url"
+        youtube-dl --add-header 'Cookie:' -xo "${target}%(title)s.%(ext)s" "$url"
         ;;
     *)
         echo "Invalid input!"

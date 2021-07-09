@@ -2,6 +2,7 @@
 #
 # record: Record the display and desktop or microphone audio
 #
+# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.
 #
 
@@ -12,27 +13,27 @@ echo "1) Record display with desktop audio"
 echo "2) Record display with microphone audio"
 echo "3) Record microphone audio"
 echo -n "> "
-read src
+read type
 
 #
 # Determine resolution if needed
 #
-if [ "$src" = "1" -o "$src" = "2" ]; then
+if [ "$type" = "1" -o "$type" = "2" ]; then
     echo -n "Enter target framerate: "
     read fps
-    res="$(xdpyinfo | awk '/dimensions/{print $2}')"
+    resolution="$(xdpyinfo | awk '/dimensions/{print $2}')"
 fi
 
 #
 # Record display
 #
-case $src in
+case $type in
     1) 
-        ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+        ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
         pulseeffects_sink out.mkv
         ;;
     2) 
-        ffmpeg -s "$res" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+        ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
         pulseeffects_source out.mkv
         ;;
     3)

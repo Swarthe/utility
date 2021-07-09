@@ -2,6 +2,7 @@
 #
 # microphone.sh: Show number of processes accessing the microphone
 #
+# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.
 #
 

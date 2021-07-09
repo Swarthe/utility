@@ -2,6 +2,7 @@
 #
 # media.sh: Show MPRIS media status
 #
+# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.
 #
 
