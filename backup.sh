@@ -8,7 +8,7 @@
 
 # todo
 # 
-# experimental macos support (ex: dir exclusions if needed, colour escape codes, utilities used) with uname and get it tested
+# experimental and automatic macos support (ex: dir exclusions if needed, colour escape codes, utilities used) with uname and get it tested
 # test thoroughly on linux, and backup desktop to make sure BACKUP_TARGET and messages and checks and backup itself work properly (especially free space check and drive model and latest mounted deduction)
 
 #
@@ -58,8 +58,6 @@ ask () {
 #
 # Handle options
 #
-[ "$*" != "${*/--help/}" ] && usage && exit
-
 while getopts :hvlist: opt; do
     case "${opt}" in
         h) 
@@ -76,7 +74,6 @@ while getopts :hvlist: opt; do
             ;;
         t)
             target="$(realpath "$OPTARG")"
-            
             ;;
         s)
             skip_interact=1
@@ -231,7 +228,7 @@ else
     done
     echo
     if wait $rsync_pid; then
-        info "Backup complete"
+        info "Backup successful"
         clean
     else
         err "Backup failed"

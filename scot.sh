@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# scot: Capture the display to clipboard or file (intended for window managers)
+# scot: Capture the display to clipboard or file (intended for use with window managers)
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.
@@ -38,8 +38,6 @@ err () {
 #
 # Handle options
 #
-[ "$*" != "${*/--help/}" ] && usage && exit
-
 while getopts :hdgf opt; do
     case "${opt}" in
         h)
@@ -73,7 +71,7 @@ done
 # Take screenshot
 #
 if [ -z "$file" ]; then
-    if [ -z "$display"]; then
+    if [ -z "$display" ]; then
         import png:- | xclip -selection clipboard -t image/png
     else
         import -window root png:- | xclip -selection clipboard -t image/png
@@ -94,9 +92,9 @@ else
         done
     fi
     if [ -z "$display" ]; then
-        import "$target"
+        import "$target" 2> /dev/null
     else
-        import -window root "$target"
+        import -window root "$target" 2> /dev/null
     fi
 fi
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ydl-plus: Download media from the internet
+# ydl-plus: Download video or audio media from the internet
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 # Licensed under the MIT License. See LICENSE.txt for more information.

@@ -1,21 +1,27 @@
-# script
+# utility
 
-## utility
+## Function
 
-Utility scripts designed for GNU/Linux with *nix portability in mind as per the table below.
+Utility scripts to simplify common CLI actions.
+
+- `backup`: Backup the filesystem to an external location.
+- `record`: Record the display and desktop or microphone audio.
+- `scot`: Capture the display to clipboard or file.
+- `ydl`: Download video or audio media from the internet.
+
+## Status
+
+Scripts are designed for GNU/Linux with *nix portability in mind as per the table below.
 
 | Script      | GNU/Linux | MacOS |
 | ----------- | :-------: | :---: |
 | backup      | ✓         | -     |
 | ydl-plus    | ✓         | ✓     |
 | record      | ✓         | x     |
+| scot        | ✓         | x     |
 
-- `backup.sh` is a work-in-progress; MacOS testing is required
-- `record.sh` desktop audio option recently broke for unknown reasons
-
-## status
-
-Status scripts intended to be displayed by other software, such as status bars. They may require significant modification in order to function as intended on other systems.
+- `backup` is a work-in-progress; MacOS testing is required
+- `record` desktop audio option recently broke for unknown reasons
 
 ## License
 
