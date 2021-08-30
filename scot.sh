@@ -11,11 +11,10 @@
 #
 # User I/O functions and variables
 #
-if [ $(tput colors) -ge 256 ]; then
-    readonly bold_red="\e[1;31m"
-    readonly bold_blue="\e[1;34m"
-    readonly normal="\033[0m"
-fi
+readonly normal="$(tput sgr0)"
+readonly bold="$(tput bold)"
+readonly bold_red="${bold}$(tput setaf 1)"
+readonly bold_blue="${bold}$(tput setaf 4)"
 
 usage ()
 {
@@ -38,12 +37,12 @@ EOF
 
 err ()
 {
-    printf "%berror:%b $*\n" "$bold_red" "$normal" >&2
+    printf '%berror:%b %b\n' "$bold_red" "$normal" "$*" >&2
 }
 
 info ()
 {
-    printf "%binfo:%b $*\n" "$bold_blue" "$normal"
+    printf '%binfo:%b %b\n' "$bold_blue" "$normal" "$*"
 }
 
 #

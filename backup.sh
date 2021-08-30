@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 #
-# backup: Synchronise the filesystem to an external location with rsync, assuming FHS compliance
+# backup: Synchronise the filesystem to an external location with rsync,
+#         assuming FHS compliance
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
-
-# todo
-# 
-# experimental and automatic macos support (ex: dir exclusions if needed, colour escape codes, utilities used) with uname and get it tested
-# test thoroughly on linux, and backup desktop to make sure BACKUP_TARGET and messages and checks and backup itself work properly (especially free space check and drive model and latest mounted deduction)
+# This software is IN DEVELOPMENT and you may PERMANENTLY lose data if you are
+# not careful. Please report bugs at <https://github.com/Swarthe/utility>.
+#
 
 #
 # User I/O functions and variables
 #
+readonly normal="$(tput sgr0)"
+readonly bold="$(tput bold)"
+readonly bold_red="${bold}$(tput setaf 1)"
+readonly bold_yellow="${bold}$(tput setaf 3)"
+readonly bold_blue="${bold}$(tput setaf 4)"
+readonly bold_cyan="${bold}$(tput setaf 6)"
+
 usage ()
 {
     cat << EOF
@@ -36,34 +42,26 @@ Note: Export the 'BACKUP_TARGET' variable to set the default target.
 EOF
 }
 
-if [ $(tput colors) -ge 256 ]; then
-    readonly bold_red="\e[1;31m"
-    readonly bold_yellow="\e[1;33m"
-    readonly bold_blue="\e[1;34m"
-    readonly bold_cyan="\e[1;36m"
-    readonly normal="\033[0m"
-fi
-
 err ()
 {
-    printf "%berror:%b $*\n" "$bold_red" "$normal" >&2
+    printf '%berror:%b %b\n' "$bold_red" "$normal" "$*" >&2
 }
 
 warn ()
 {
-    printf "%bwarn:%b $*\n" "$bold_yellow" "$normal" >&2
+    printf '%bwarn:%b %b\n' "$bold_yellow" "$normal" "$*"
 }
 
 info ()
 {
-    printf "%binfo:%b $*\n" "$bold_blue" "$normal"
+    printf '%binfo:%b %b\n' "$bold_blue" "$normal" "$*"
 }
 
 ask ()
 {
     local confirm
     until [ "$confirm" = "y" -o "$confirm" = "n" ]; do
-        printf "%b::%b $* [y/n] " "$bold_cyan" "$normal"
+        printf '%b::%b %b [y/n] ' "$bold_cyan" "$normal" "$*"
         read -r confirm
     done
     [ "$confirm" != "y" ] && return 1 || return 0
@@ -131,6 +129,8 @@ fi
 
 [ "$target_source" ] \
     && target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
+
+n_inode=$(df --output=iused / | tail -n 1)
 
 #
 # Run checks
@@ -220,6 +220,8 @@ fi
 #
 # Run backup
 #
+readonly clear_line="$(tput cr && tput el 1)"
+
 syncr ()
 {
     if [ -z "$verbose" -a -z "$log" ]; then
@@ -245,33 +247,44 @@ clean ()
 if [ -z "$log" ]; then
     syncr && clean
 else
+    log_file="$(realpath backup.log)"
     if [ -w . ]; then
-        syncr &> "backup.log" &
+        syncr &> "$log_file" &
         rsync_pid=$!
-        info "Log file is '$(realpath backup.log)'"
+        info "Log file is '$log_file'"
+        file_count ()
+        {
+            wc -l < $log_file
+        }
     else
         syncr &> /dev/null &
         rsync_pid=$!
         err "Could not create log file"
+        file_count ()
+        {
+            printf '?'
+        }
     fi
 
     while kill -0 $rsync_pid 2> /dev/null; do
-        for i in . .. ...; do
+        for i in '   ' '.  ' '.. ' '...'; do
             # the escape code resets the line
-            printf "\r\e[K%binfo:%b Backup in progress%b" "$bold_blue" \
-                                                          "$normal" \
-                                                          "$i"
+            printf '%binfo:%b Backup in progress%b (%b files copied)' \
+                       "${clear_line}${bold_blue}"                    \
+                       "$normal"                                      \
+                       "$i"                                           \
+                       "$(file_count)"
             sleep 0.5
         done
     done
 
-    printf "\n"
+    printf '\n'
 
     if wait $rsync_pid; then
         info "Backup successful" && clean
     else
         err "Backup failed"
-        [ -e backup.log ] \
-            && printf '%s\n' "See 'backup.log' for more information."
+        [ -e $log_file ] \
+            && printf '%s\n' "See '$log_file' for more information."
     fi
 fi

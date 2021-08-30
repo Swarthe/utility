@@ -1,8 +1,6 @@
 # utility
 
-## Function
-
-Utility scripts to simplify common CLI actions.
+Scripts to simplify common CLI actions (in development).
 
 - `backup`: Backup the filesystem to an external location.
 - `record`: Record the display and desktop or microphone audio.
@@ -11,7 +9,11 @@ Utility scripts to simplify common CLI actions.
 
 ## Status
 
-Scripts are designed for GNU/Linux with *nix portability in mind as per the table below.
+- `backup` is a work-in-progress; MacOS testing is required.
+- `record` desktop audio option recently broke for unknown reasons.
+
+Scripts are designed for GNU/Linux with *nix portability in mind as per the
+table below.
 
 | Script      | GNU/Linux | MacOS |
 | ----------- | :-------: | :---: |
@@ -20,9 +22,6 @@ Scripts are designed for GNU/Linux with *nix portability in mind as per the tabl
 | record      | ✓         | x     |
 | scot        | ✓         | x     |
 
-- `backup` is a work-in-progress; MacOS testing is required
-- `record` desktop audio option recently broke for unknown reasons
-
 ## License
 
-Licensed under the MIT license. See `LICENSE.txt` for more information.
+Subject to the MIT license. See `LICENSE.txt` for more information.
