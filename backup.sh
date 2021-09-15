@@ -14,6 +14,7 @@
 #
 # User I/O functions and variables
 #
+
 readonly normal="$(tput sgr0)"
 readonly bold="$(tput bold)"
 readonly bold_red="${bold}$(tput setaf 1)"
@@ -31,7 +32,6 @@ Unless manually set, automatically determine the target.
 Options:
   -v    use verbose output
   -l    log to file instead of stdout (implies '-v')
-  -i    use interactive checks
   -t    specify target for the backup
   -s    skip all interactive prompts (use at your own peril)
   -h    display this help text
@@ -70,6 +70,7 @@ ask ()
 #
 # Handle options
 #
+
 while getopts :hvlist: opt; do
     case "${opt}" in
     h)
@@ -106,6 +107,7 @@ done
 #
 # Attempt to determine target and related data if needed
 #
+
 latest_source="$(df --output=source | tail -n 1)"
 
 if [ -z "$target" ]; then
@@ -130,75 +132,70 @@ fi
 [ "$target_source" ] \
     && target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
 
-n_inode=$(df --output=iused / | tail -n 1)
+#n_inode=$(df --output=iused / | tail -n 1)
 
 #
 # Run checks
 #
+
+check_exclude ()
+{
+    # succeed if target is in excluded dirs
+    # get first element in path (ugly)
+    case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
+    /dev|/proc|/sys|/tmp|/run|/mnt)
+        return
+        ;;
+    esac
+
+    return 1
+}
+
 check_root ()
 {
-    [ "$target_target" != "/" ]
+    # succeed if root
+    [ "$target_target" = "/" ]
 }
 
 check_space ()
 {
+    # succeed if not enough space
     [ $(df --output=used -k / | tail -n 1) \
-    -lt $(df --output=size -k "$target" | tail -n 1) ]
+    -gt $(df --output=size -k "$target" | tail -n 1) ]
 }
 
-if [ -z "$interact" ]; then
-    if [ "$(id -u)" != "0" ]; then
-        warn "We do not have root privileges"
+# a recursive backup would be extremely dangerous for the filesystem
+if ! check_exclude; then
+    err "Recursive backups are not permitted"
+    printf '%s\n' "The target may be mounted to a non-standard location."
+    exit 2
+fi
+
+if [ $(id -u) != 0 ]; then
+    warn "We do not have root privileges"
+fi
+
+if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
+    if check_root; then
+        warn "Target drive '$target_model' is the root drive"
+        target_is_root=1
     fi
 
-    if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
-        if ! check_root; then
-            warn "Target drive '$target_model' is the root drive"
-            target_is_root=1
-        fi
-
-        if ! check_space; then
-            warn "Target drive '$target_model' has insufficient free space"
-        fi
-    elif [ -d "$target" -a "$target_model" ]; then
-        warn "Target '$target' is inaccessible"
-    elif [ -e "$target" ]; then
-        warn "Target '$target' is invalid"
-    else
-        warn "Target '$target' does not exist"
+    if check_space; then
+        warn "Target drive '$target_model' has insufficient free space"
     fi
+elif [ -d "$target" -a "$target_model" ]; then
+    warn "Target '$target' is inaccessible"
+elif [ -e "$target" ]; then
+    warn "Target '$target' is invalid"
 else
-    if [ "$(id -u)" != "0" ]; then
-        ask "We do not have root privileges. Proceed anyway?" \
-            || exit 0
-    fi
-
-    if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
-        if ! check_root; then
-            ask "Target drive '$target_model' is the root drive. Proceed anyway?" \
-                || exit 0
-            target_is_root=1
-        fi
-
-        if ! check_space; then
-            ask "Target drive '$target_model' has insufficient free space. Proceed anyway?" \
-                || exit 0
-        fi
-    elif [ -d "$target" -a "$target_model" ]; then
-        ask "Target '$target' is inaccessible. Proceed anyway?" \
-            || exit 0
-    elif [ -e "$target" ]; then
-        ask "Target '$target' is invalid. Proceed anyway?" \
-            || exit 0
-    else
-        ask "Target '$target' does not exist. Proceed anyway?" \
-            || exit 0
-    fi
+    warn "Target '$target' does not exist"
 fi
 
 #
 # Confirm or announce target
 #
+
 if [ -z "$skip_interact" ]; then
     if [ "$target_model" ]; then
         ask "Backup to '$target' on '$target_model'?" \
@@ -220,16 +217,17 @@ fi
 #
 # Run backup
 #
+
 readonly clear_line="$(tput cr && tput el 1)"
 
 syncr ()
 {
     if [ -z "$verbose" -a -z "$log" ]; then
-        rsync -aHAX --info=progress2 --delete / \
+        rsync -aHAXE --info=progress2 --delete / \
         --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
         "$target"
     else
-        rsync -aHAXv --delete / \
+        rsync -aHAXEv --delete / \
         --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
         "$target"
     fi
@@ -248,10 +246,12 @@ if [ -z "$log" ]; then
     syncr && clean
 else
     log_file="$(realpath backup.log)"
+
     if [ -w . ]; then
         syncr &> "$log_file" &
         rsync_pid=$!
         info "Log file is '$log_file'"
+
         file_count ()
         {
             wc -l < $log_file
@@ -260,25 +260,27 @@ else
         syncr &> /dev/null &
         rsync_pid=$!
         err "Could not create log file"
+
         file_count ()
         {
-            printf '?'
+            printf '%s' "?"
         }
     fi
 
     while kill -0 $rsync_pid 2> /dev/null; do
         for i in '   ' '.  ' '.. ' '...'; do
             # the escape code resets the line
-            printf '%binfo:%b Backup in progress%b (%b files copied)' \
-                       "${clear_line}${bold_blue}"                    \
-                       "$normal"                                      \
-                       "$i"                                           \
-                       "$(file_count)"
+            printf '%b%binfo:%b %s %s'          \
+            "$clear_line"                       \
+            "$bold_blue"                        \
+            "$normal"                           \
+            "Backup in progress$i"              \
+            "($(file_count) files copied)"
             sleep 0.5
         done
     done
 
-    printf '\n'
+    printf '%b' "\n"
 
     if wait $rsync_pid; then
         info "Backup successful" && clean
