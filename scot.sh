@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# scot: Capture the display to clipboard or file with magick import
+# scot: Capture the display to clipboard or file with ImageMagick
 #
-# An example config for i3 integration:
+# An example configuration for i3 integration:
 #
-#   bindsym $mod+s --release exec --no-startup-id scot -g
-#   bindsym $mod+Shift+s exec --no-startup-id scot -dg
-#   bindsym $mod+$sup+s --release exec --no-startup-id scot -fg
-#   bindsym $mod+$sup+Shift+s exec --no-startup-id scot -dgf
+#   bindsym $mod+s --release exec --no-startup-id scot
+#   bindsym $mod+Shift+s --release exec --no-startup-id scot -f
+#   bindsym $mod+$sup+s exec --no-startup-id scot -d
+#   bindsym $mod+$sup+Shift+s exec --no-startup-id scot -df
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #

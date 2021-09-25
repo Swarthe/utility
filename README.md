@@ -2,10 +2,10 @@
 
 Scripts to simplify common CLI actions (in development).
 
-- `backup`: Backup the filesystem to an external location.
-- `record`: Record the display and desktop or microphone audio.
-- `scot`: Capture the display to clipboard or file.
-- `ydl`: Download video or audio media from the internet.
+- `backup` : Backup the filesystem to an external location.
+- `record` : Record the display and desktop or microphone audio.
+- `scot`   : Capture the display to clipboard or file.
+- `ydl`    : Download video or audio media from the internet.
 
 ## Status
 

@@ -44,24 +44,24 @@ EOF
 
 err ()
 {
-    printf '%berror:%b %b\n' "$bold_red" "$normal" "$*" >&2
+    printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
 }
 
 warn ()
 {
-    printf '%bwarn:%b %b\n' "$bold_yellow" "$normal" "$*"
+    printf '%bwarn:%b %s\n' "$bold_yellow" "$normal" "$*"
 }
 
 info ()
 {
-    printf '%binfo:%b %b\n' "$bold_blue" "$normal" "$*"
+    printf '%binfo:%b %s\n' "$bold_blue" "$normal" "$*"
 }
 
 ask ()
 {
     local confirm
     until [ "$confirm" = "y" -o "$confirm" = "n" ]; do
-        printf '%b::%b %b [y/n] ' "$bold_cyan" "$normal" "$*"
+        printf '%b::%b %s [y/n] ' "$bold_cyan" "$normal" "$*"
         read -r confirm
     done
     [ "$confirm" != "y" ] && return 1 || return 0
@@ -252,6 +252,7 @@ else
         rsync_pid=$!
         info "Log file is '$log_file'"
 
+        # very approximative and unreliable
         file_count ()
         {
             wc -l < $log_file
@@ -270,11 +271,11 @@ else
     while kill -0 $rsync_pid 2> /dev/null; do
         for i in '   ' '.  ' '.. ' '...'; do
             # the escape code resets the line
-            printf '%b%binfo:%b %s %s'          \
-            "$clear_line"                       \
-            "$bold_blue"                        \
-            "$normal"                           \
-            "Backup in progress$i"              \
+            printf '%b%binfo:%b %s %s'      \
+            "$clear_line"                   \
+            "$bold_blue"                    \
+            "$normal"                       \
+            "Backup in progress$i"          \
             "($(file_count) files copied)"
             sleep 0.5
         done

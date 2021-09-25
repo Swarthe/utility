@@ -1,40 +1,88 @@
 #!/usr/bin/env bash
 #
-# ydl-plus: Download video or audio media in an organised fashion with youtube-dl
+# ydl: Download video or audio media from the internet in an organised
+#      fashion with youtube-dl
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
+# Cool example command for audio playlists from YouTube ' - Topic' channels
+# which don't have artists name in title:
 #
-# Prompt user
-#
-echo "1) Download video"
-echo "2) Download audio"
-echo -n "> "
-read type
-
-echo -n "Enter target directory: "
-read target
-# add leading slash to avoid breaking youtube-dl
-[ "$target" ] && target+="/"
-
-echo -n "Enter URL: "
-read url
+# youtube-dl --add-header 'Cookie:' --playlist-start $start --playlist-end \
+# $end -xo "%(creator)s - %(title)s.%(ext)s" "$url"
 
 #
-# Download media
+# User I/O functions and variables
 #
-case $type in
-1)
-    youtube-dl --add-header 'Cookie:' -o "${target}%(title)s.%(ext)s" "$url"
-    ;;
-2)
-    youtube-dl --add-header 'Cookie:' -xo "${target}%(title)s.%(ext)s" "$url"
-    ;;
-*)
-    echo "Invalid input!"
-    exit 1
-    ;;
-esac
+
+readonly normal="$(tput sgr0)"
+readonly bold="$(tput bold)"
+readonly bold_red="${bold}$(tput setaf 1)"
+
+usage ()
+{
+    cat << EOF
+Usage: ydl [OPTION]... [-t] [TARGET]
+Download video or audio media form the internet.
+
+Options:
+  -v    download video
+  -a    download audio
+  -t    specify target for download
+  -c    prepend creator to file name
+  -h    display this help text
+
+Example: ydl -t [TARGET] -a [URL]
+EOF
+}
+
+err ()
+{
+    printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
+}
+
+#
+# Handle options
+#
+
+while getopts :ht:v:a:c opt; do
+    case "${opt}" in
+    h)
+        usage; exit
+        ;;
+    t)
+        # add leading slash to avoid breaking youtube-dl
+        target="$(realpath "$OPTARG")/"
+        ;;
+    v)
+        url="$OPTARG"
+        ;;
+    a)
+        url="$OPTARG"
+        format='x'
+        ;;
+    c)
+        creator="%(creator)s - "
+        ;;
+    :)
+        err "Option '$OPTARG' requires an argument"
+        printf '%s\n' "Try 'backup -h' for more information."
+        exit 1
+        ;;
+    \?)
+        err "Invalid option '$OPTARG'"
+        printf '%s\n' "Try 'backup -h' for more information."
+        exit 1
+        ;;
+    esac
+done
+
+#
+# Run download
+#
+
+youtube-dl --add-header 'Cookie:' -${format}o \
+"${target}${creator}%(title)s.%(ext)s" "$url"
