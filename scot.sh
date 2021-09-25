@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 #
 # scot: Capture the display to clipboard or file with magick import
-# (intended for use with window managers)
+#
+# An example config for i3 integration:
+#
+#   bindsym $mod+s --release exec --no-startup-id scot -g
+#   bindsym $mod+Shift+s exec --no-startup-id scot -dg
+#   bindsym $mod+$sup+s --release exec --no-startup-id scot -fg
+#   bindsym $mod+$sup+Shift+s exec --no-startup-id scot -dgf
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -11,6 +17,7 @@
 #
 # User I/O functions and variables
 #
+
 readonly normal="$(tput sgr0)"
 readonly bold="$(tput bold)"
 readonly bold_red="${bold}$(tput setaf 1)"
@@ -19,58 +26,61 @@ readonly bold_blue="${bold}$(tput setaf 4)"
 usage ()
 {
     cat << EOF
-Usage: scot [OPTION]
+Usage: scot [OPTION]... [-g] [VALUE]
 Capture the display.
 Unless overriden, capture rectangular selection.
 
 Options:
   -d    capture entire display
-  -g    use graphical notifications
+  -g    override graphical notifications setting by passing '1' or '0'
   -f    capture to file
   -h    display this help text
 
 Example: scot -nf
 
-Note: Export the 'SCOT_TARGET' variable to set the target for '-f'.
+Note: Export the 'SCOT_GRAPHICAL' variable to enable graphical notifications.
+      Export the 'SCOT_TARGET' variable to set the target for '-f'.
 EOF
 }
 
 err ()
 {
-    printf '%berror:%b %b\n' "$bold_red" "$normal" "$*" >&2
+    printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
 }
 
 info ()
 {
-    printf '%binfo:%b %b\n' "$bold_blue" "$normal" "$*"
+    printf '%binfo:%b %s\n' "$bold_blue" "$normal" "$*"
 }
 
 #
 # Handle options
 #
-while getopts :hdgf opt; do
+
+[ $SCOT_GRAPHICAL ] && graphical=1
+
+while getopts :hdg:f opt; do
     case "${opt}" in
     h)
         usage; exit
         ;;
     d)
-        display="1"
+        display=1
         ;;
     g)
-        graphical="1"
-
-        err ()
-        {
-            notify-send -u critical "scot" "$*"
-        }
-
-        info ()
-        {
-            notify-send -i "$target" "scot" "$*"
-        }
+        if [ "$OPTARG" = 1 ]; then
+            graphical=1
+        elif [ "$OPTARG" = 0 ]; then
+            graphical=''
+        fi
         ;;
     f)
-        file="1"
+        file=1
+        ;;
+    :)
+        err "Option '$OPTARG' requires an argument"
+        printf '%s\n' "Try 'scot -h' for more information."
+        exit 1
         ;;
     \?)
         err "Invalid option '$OPTARG'"
@@ -80,9 +90,22 @@ while getopts :hdgf opt; do
     esac
 done
 
+if [ "$graphical" ]; then
+    err ()
+    {
+        notify-send -u critical "scot" "$*"
+    }
+
+    info ()
+    {
+        notify-send -i "$target" "scot" "$*"
+    }
+fi
+
 #
 # Take screenshot
 #
+
 if [ -z "$file" ]; then
     if [ -z "$display" ]; then
         import png:- | xclip -selection clipboard -t image/png
@@ -115,6 +138,7 @@ fi
 #
 # Announce or notify
 #
+
 if [ "$graphical" ]; then
     if [ -z "$file" ]; then
         info "Screenshot successful"
