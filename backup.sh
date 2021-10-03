@@ -3,6 +3,11 @@
 # backup: Synchronise the filesystem to an external location with rsync,
 #         assuming FHS compliance
 #
+# If using the BACKUP_TARGET environment variable, you can configure
+# sudo to preserve it by adding the following to your sudoers file:
+#
+#   Defaults env_keep += "BACKUP_TARGET"
+#
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
@@ -25,7 +30,7 @@ readonly bold_cyan="${bold}$(tput setaf 6)"
 usage ()
 {
     cat << EOF
-Usage: backup [OPTION]... [-t] [TARGET]
+Usage: backup [OPTION]... [-s] [VALUE] [-t] [TARGET]
 Synchronise the filesystem to an external location.
 Unless manually set, automatically determine the target.
 
@@ -33,7 +38,8 @@ Options:
   -v    use verbose output
   -l    log to file instead of stdout (implies '-v')
   -t    specify target for the backup
-  -s    skip all interactive prompts (use at your own peril)
+  -s    specify what to skip (use at your own peril); 'prompt' to skip prompts,
+        'check' to skip checks, 'all' to skip everything
   -h    display this help text
 
 Example: backup -lt /mnt/backup/
@@ -71,7 +77,7 @@ ask ()
 # Handle options
 #
 
-while getopts :hvlist: opt; do
+while getopts :hvlis:t: opt; do
     case "${opt}" in
     h)
         usage && exit
@@ -89,7 +95,17 @@ while getopts :hvlist: opt; do
         target="$(realpath "$OPTARG")"
         ;;
     s)
-        skip_interact=1
+        if [ "$OPTARG" = "prompt" ]; then
+            skip_interact=1
+        elif [ "$OPTARG" = "check" ]; then
+            skip_check=1
+        elif [ "$OPTARG" = "all" ]; then
+            skip_interact=1; skip_check=1
+        else
+            err "Invalid argument '$OPTARG' for option 's'"
+            printf '%s\n' "Try 'scot -h' for more information."
+            exit 1
+        fi
         ;;
     :)
         err "Option '$OPTARG' requires an argument"
@@ -138,58 +154,60 @@ fi
 # Run checks
 #
 
-check_exclude ()
-{
-    # succeed if target is in excluded dirs
-    # get first element in path (ugly)
-    case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
-    /dev|/proc|/sys|/tmp|/run|/mnt)
-        return
-        ;;
-    esac
+if [ -z $skip_check ]; then
+    check_exclude ()
+    {
+        # succeed if target is in excluded dirs
+        # get first element in path (ugly)
+        case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
+        /dev|/proc|/sys|/tmp|/run|/mnt)
+            return
+            ;;
+        esac
 
-    return 1
-}
+        return 1
+    }
 
-check_root ()
-{
-    # succeed if root
-    [ "$target_target" = "/" ]
-}
+    check_root ()
+    {
+        # succeed if root
+        [ "$target_target" = "/" ]
+    }
 
-check_space ()
-{
-    # succeed if not enough space
-    [ $(df --output=used -k / | tail -n 1) \
-    -gt $(df --output=size -k "$target" | tail -n 1) ]
-}
+    check_space ()
+    {
+        # succeed if not enough space
+        [ $(df --output=used -k / | tail -n 1) \
+        -gt $(df --output=size -k "$target" | tail -n 1) ]
+    }
 
-# a recursive backup would be extremely dangerous for the filesystem
-if ! check_exclude; then
-    err "Recursive backups are not permitted"
-    printf '%s\n' "The target may be mounted to a non-standard location."
-    exit 2
-fi
-
-if [ $(id -u) != 0 ]; then
-    warn "We do not have root privileges"
-fi
-
-if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
-    if check_root; then
-        warn "Target drive '$target_model' is the root drive"
-        target_is_root=1
+    # a recursive backup would be extremely dangerous for the filesystem
+    if ! check_exclude; then
+        err "Recursive backups are not permitted"
+        printf '%s\n' "The target may be mounted to a non-standard location."
+        exit 2
     fi
 
-    if check_space; then
-        warn "Target drive '$target_model' has insufficient free space"
+    if [ $(id -u) != 0 ]; then
+        warn "We do not have root privileges"
     fi
-elif [ -d "$target" -a "$target_model" ]; then
-    warn "Target '$target' is inaccessible"
-elif [ -e "$target" ]; then
-    warn "Target '$target' is invalid"
-else
-    warn "Target '$target' does not exist"
+
+    if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
+        if check_root; then
+            warn "Target drive '$target_model' is the root drive"
+            target_is_root=1
+        fi
+
+        if check_space; then
+            warn "Target drive '$target_model' has insufficient free space"
+        fi
+    elif [ -d "$target" -a "$target_model" ]; then
+        warn "Target '$target' is inaccessible"
+    elif [ -e "$target" ]; then
+        warn "Target '$target' is invalid"
+    else
+        warn "Target '$target' does not exist"
+    fi
 fi
 
 #
