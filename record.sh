@@ -20,10 +20,14 @@
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
+# TODO:
+#
 # check our i3 config for audio management shortcuts for efficient ways to
 # manager pipewire devices
 #
-# TODO: add support for recording from camera
+# add support for recording from camera (also with audio)
+# add support for recording display with no audio (individual OPTARG management
+# for options)
 
 #
 # User I/O functions and variables
@@ -46,7 +50,6 @@ Options:
   -m    record only microphone audio
   -h    display this help text
 
-
 Example: record -d+m
 EOF
 }
@@ -60,10 +63,11 @@ err ()
 # Handle options
 #
 
-# maybe implement defaults
+# TODO: maybe implement defaults
 if [ $# -eq 0 ]; then
-    err "An option is required"
+    err "Missing option"
     printf '%s\n' "Try 'record -h' for more information."
+    exit 1
 fi
 
 audio_opt ()
@@ -90,7 +94,7 @@ while getopts :hd:cm opt; do
     c)
         # mpv can take pictures from camera feed
         mpv av://v4l2:/dev/video0 --profile=low-latency --untimed
-        break
+        exit
         ;;
     m)
         type=3

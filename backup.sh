@@ -21,6 +21,7 @@
 #
 
 readonly normal="$(tput sgr0)"
+readonly clear_line="$(tput cr && tput el 1)"
 readonly bold="$(tput bold)"
 readonly bold_red="${bold}$(tput setaf 1)"
 readonly bold_yellow="${bold}$(tput setaf 3)"
@@ -37,14 +38,15 @@ Unless manually set, automatically determine the target.
 Options:
   -v    use verbose output
   -l    log to file instead of stdout (implies '-v')
-  -t    specify target for the backup
+  -t    specify backup target location (overrides 'BACKUP_TARGET')
   -s    specify what to skip (use at your own peril); 'prompt' to skip prompts,
         'check' to skip checks, 'all' to skip everything
   -h    display this help text
 
 Example: backup -lt /mnt/backup/
 
-Note: Export the 'BACKUP_TARGET' variable to set the default target.
+Environment variables:
+  BACKUP_TARGET     set the backup target location
 EOF
 }
 
@@ -236,8 +238,6 @@ fi
 # Run backup
 #
 
-readonly clear_line="$(tput cr && tput el 1)"
-
 syncr ()
 {
     if [ -z "$verbose" -a -z "$log" ]; then
@@ -288,7 +288,6 @@ else
 
     while kill -0 $rsync_pid 2> /dev/null; do
         for i in '   ' '.  ' '.. ' '...'; do
-            # the escape code resets the line
             printf '%b%binfo:%b %s %s'      \
             "$clear_line"                   \
             "$bold_blue"                    \

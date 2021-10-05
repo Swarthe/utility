@@ -8,11 +8,16 @@
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
+# TODO: maybe add this as feature
+#
 # Cool example command for audio playlists from YouTube ' - Topic' channels
 # which don't have artists name in title:
 #
 # youtube-dl --add-header 'Cookie:' --playlist-start $start --playlist-end \
 # $end -xo "%(creator)s - %(title)s.%(ext)s" "$url"
+#
+# maybe maybe add env variables for default target and creator setting and other
+#
 
 #
 # User I/O functions and variables
@@ -25,17 +30,20 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: ydl [OPTION]... [-t] [TARGET]
+Usage: ydl [OPTION]... [URL] [-t] [TARGET]
 Download video or audio media form the internet.
 
 Options:
-  -v    download video
-  -a    download audio
-  -t    specify target for download
+  -v    download video from specified URL
+  -a    download audio from specified URL
+  -t    specify target directory for download
   -c    prepend creator to file name
   -h    display this help text
 
-Example: ydl -t [TARGET] -a [URL]
+Example: ydl -a [URL] -t ~/video
+
+Note: You can pass the download options with an argument several times to
+      download from multiple different URLs sequentially.
 EOF
 }
 
@@ -83,6 +91,10 @@ done
 #
 # Run download
 #
-
-youtube-dl --add-header 'Cookie:' -${format}o \
-"${target}${creator}%(title)s.%(ext)s" "$url"
+if [ $url ]; then
+    youtube-dl --add-header 'Cookie:' -${format}o \
+    "${target}${creator}%(title)s.%(ext)s" "$url"
+else
+    err "A valid URL must be passed with '-v' or '-a'"
+    printf '%s\n' "Try 'backup -h' for more information."
+fi

@@ -32,14 +32,16 @@ Unless overriden, capture rectangular selection.
 
 Options:
   -d    capture entire display
-  -g    override graphical notifications setting by passing '1' or '0'
+  -g    specify '1' to enable graphical notifications; specify '0' to disable
+        (overrides 'SCOT_GRAPHICAL')
   -f    capture to file
   -h    display this help text
 
 Example: scot -nf
 
-Note: Export the 'SCOT_GRAPHICAL' variable to enable graphical notifications.
-      Export the 'SCOT_TARGET' variable to set the target for '-f'.
+Environment variables:
+  SCOT_GRAPHICAL    '1' to enable graphical notifications, '0' to disable
+  SCOT_TARGET       set the target for '-f'
 EOF
 }
 
@@ -57,7 +59,15 @@ info ()
 # Handle options
 #
 
-[ $SCOT_GRAPHICAL ] && graphical=1
+if [ "$SCOT_GRAPHICAL" = 1 ]; then
+    graphical=1
+elif [ "$SCOT_GRAPHICAL" = 0 ]; then
+    graphical=''
+else
+    err "Invalid argument '$OPTARG' for option 'g'"
+    printf '%s\n' "Try 'scot -h' for more information."
+    exit 1
+fi
 
 while getopts :hdg:f opt; do
     case "${opt}" in
@@ -72,6 +82,10 @@ while getopts :hdg:f opt; do
             graphical=1
         elif [ "$OPTARG" = 0 ]; then
             graphical=''
+        else
+            err "Invalid argument '$OPTARG' for option 'g'"
+            printf '%s\n' "Try 'scot -h' for more information."
+            exit 1
         fi
         ;;
     f)
