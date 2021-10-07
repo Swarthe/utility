@@ -28,13 +28,12 @@ usage ()
     cat << EOF
 Usage: scot [OPTION]... [-g] [VALUE]
 Capture the display.
-Unless overriden, capture rectangular selection.
 
 Options:
-  -d    capture entire display
-  -g    specify '1' to enable graphical notifications; specify '0' to disable
-        (overrides 'SCOT_GRAPHICAL')
-  -f    capture to file
+  -d    capture the entire display
+  -f    capture to a file
+  -g    specify 'on' to enable graphical notifications; specify 'off' to disable
+          (overrides 'SCOT_GRAPHICAL')
   -h    display this help text
 
 Example: scot -nf
@@ -42,6 +41,8 @@ Example: scot -nf
 Environment variables:
   SCOT_GRAPHICAL    '1' to enable graphical notifications, '0' to disable
   SCOT_TARGET       set the target for '-f'
+
+Note: By default, a rectangular selection will be captured.
 EOF
 }
 
@@ -78,9 +79,9 @@ while getopts :hdg:f opt; do
         display=1
         ;;
     g)
-        if [ "$OPTARG" = 1 ]; then
+        if [ "$OPTARG" = 'on' ]; then
             graphical=1
-        elif [ "$OPTARG" = 0 ]; then
+        elif [ "$OPTARG" = 'off' ]; then
             graphical=''
         else
             err "Invalid argument '$OPTARG' for option 'g'"
@@ -117,7 +118,7 @@ if [ "$graphical" ]; then
 fi
 
 #
-# Take screenshot
+# Take the screenshot
 #
 
 if [ -z "$file" ]; then

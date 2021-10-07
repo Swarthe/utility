@@ -33,20 +33,22 @@ usage ()
     cat << EOF
 Usage: backup [OPTION]... [-s] [VALUE] [-t] [TARGET]
 Synchronise the filesystem to an external location.
-Unless manually set, automatically determine the target.
 
 Options:
   -v    use verbose output
-  -l    log to file instead of stdout (implies '-v')
-  -t    specify backup target location (overrides 'BACKUP_TARGET')
-  -s    specify what to skip (use at your own peril); 'prompt' to skip prompts,
-        'check' to skip checks, 'all' to skip everything
+  -l    log to a file instead of stdout (implies '-v')
+  -t    specify the backup target location (overrides 'BACKUP_TARGET')
+  -s    specify what safety measures to skip (use at your own peril); 'prompt'
+          to skip prompts, 'check' to skip checks, 'all' to skip everything
   -h    display this help text
 
 Example: backup -lt /mnt/backup/
 
 Environment variables:
   BACKUP_TARGET     set the backup target location
+
+Note: Unless manually set, we will attempt to automatically determine the
+      target.
 EOF
 }
 
@@ -68,11 +70,17 @@ info ()
 ask ()
 {
     local confirm
+
     until [ "$confirm" = "y" -o "$confirm" = "n" ]; do
         printf '%b::%b %s [y/n] ' "$bold_cyan" "$normal" "$*"
         read -r confirm
     done
-    [ "$confirm" != "y" ] && return 1 || return 0
+
+    if [ "$confirm" = "y" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 #
@@ -82,16 +90,13 @@ ask ()
 while getopts :hvlis:t: opt; do
     case "${opt}" in
     h)
-        usage && exit
+        usage; exit
         ;;
     v)
         verbose=1
         ;;
     l)
         log=1
-        ;;
-    i)
-        interact=1
         ;;
     t)
         target="$(realpath "$OPTARG")"
@@ -226,47 +231,50 @@ if [ -z "$skip_interact" ]; then
     fi
 else
     if [ "$target_model" ]; then
-        info "Target is '$target' on '$target_model'" \
-            || exit 0
+        info "Target is '$target' on '$target_model'"
     else
-        info "Target is '$target'" \
-            || exit 0
+        info "Target is '$target'"
     fi
 fi
 
 #
-# Run backup
+# Run the backup
 #
 
-syncr ()
+if [ -z "$verbose" -a -z "$log" ]; then
+    # rsync progress indicator option
+    progress="--info=progress2"
+else
+    # rsync verbose option
+    progress="-v"
+fi
+
+synchronise ()
 {
-    if [ -z "$verbose" -a -z "$log" ]; then
-        rsync -aHAXE --info=progress2 --delete / \
-        --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
-        "$target"
-    else
-        rsync -aHAXEv --delete / \
-        --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
-        "$target"
-    fi
+    rsync -aHAXE "$progress" --info=progress2 --delete / \
+    --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
+    "$target"
 }
 
 clean ()
 {
     if [ -z "$skip_interact" -a -z "$target_is_root" -a "$target_model" ]; then
         ask "Unmount target drive '$target_model' at '$target_target'?" \
-            || exit 0
-        umount "$target_target"
+            && umount "$target_target"
     fi
 }
 
 if [ -z "$log" ]; then
-    syncr && clean
+    if synchronise && clean; then
+        exit
+    else
+        exit 3
+    fi
 else
     log_file="$(realpath backup.log)"
 
     if [ -w . ]; then
-        syncr &> "$log_file" &
+        synchronise &> "$log_file" &
         rsync_pid=$!
         info "Log file is '$log_file'"
 
@@ -276,7 +284,7 @@ else
             wc -l < $log_file
         }
     else
-        syncr &> /dev/null &
+        synchronise &> /dev/null &
         rsync_pid=$!
         err "Could not create log file"
 
@@ -287,12 +295,12 @@ else
     fi
 
     while kill -0 $rsync_pid 2> /dev/null; do
-        for i in '   ' '.  ' '.. ' '...'; do
+        for c in '   ' '.  ' '.. ' '...'; do
             printf '%b%binfo:%b %s %s'      \
             "$clear_line"                   \
             "$bold_blue"                    \
             "$normal"                       \
-            "Backup in progress$i"          \
+            "Backup in progress$c"          \
             "($(file_count) files copied)"
             sleep 0.5
         done
@@ -301,10 +309,12 @@ else
     printf '%b' "\n"
 
     if wait $rsync_pid; then
-        info "Backup successful" && clean
+        info "Backup successful"; clean
+        exit
     else
         err "Backup failed"
         [ -e $log_file ] \
             && printf '%s\n' "See '$log_file' for more information."
+        exit 3
     fi
 fi

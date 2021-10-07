@@ -34,10 +34,10 @@ Usage: ydl [OPTION]... [URL] [-t] [TARGET]
 Download video or audio media form the internet.
 
 Options:
-  -v    download video from specified URL
-  -a    download audio from specified URL
-  -t    specify target directory for download
-  -c    prepend creator to file name
+  -v    download video from the specified URL
+  -a    download audio from the specified URL
+  -t    specify the target directory for download
+  -c    prepend the creator's name to the filename
   -h    display this help text
 
 Example: ydl -a [URL] -t ~/video
@@ -89,7 +89,7 @@ while getopts :ht:v:a:c opt; do
 done
 
 #
-# Run download
+# Run the download
 #
 if [ $url ]; then
     youtube-dl --add-header 'Cookie:' -${format}o \
