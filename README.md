@@ -6,6 +6,7 @@ Scripts to simplify common CLI actions (in development).
 - `record`  : Record the display and desktop or microphone audio.
 - `scot`    : Capture the display to clipboard or file.
 - `ydl`     : Download video or audio media from the internet.
+- `vimg`    : Display images with optional interactivity.
 
 ## Status
 
@@ -21,6 +22,7 @@ table below.
 | ydl-plus    | ✓         | ✓     |
 | record      | ✓         | x     |
 | scot        | ✓         | x     |
+| vimg        | ✓         | -     |
 
 ## License
 

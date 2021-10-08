@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# record: Record or capture any combination of audio, display and camera with
+# record: Record or capture any combination of audio, display and camera using
 #         ffmpeg and mpv
 #
 # An example desktop file for the camera functionality:
@@ -53,8 +53,6 @@ Options:
   -h    display this help text
 
 Example: record -d+m
-
-Note: You may only specify one source option (these are 'd', 'c', 'm').
 EOF
 }
 
@@ -118,9 +116,7 @@ while getopts :hd:cmf: opt; do
     esac
 done
 
-#
-# Solve problems
-#
+shift $((OPTIND-1))
 
 # Exit if number of source options is null or greater than 1 to avoid conflicts
 # TODO: implement documented defaults, especially for frame rate
@@ -133,6 +129,10 @@ elif [ $opt_count -ne 1 ]; then
     printf '%s\n' "Try 'record -h' for more information."
     exit 1
 fi
+
+#
+# Collect data
+#
 
 # Collect or check for necessary information to record the display
 if [ "$type" = 'd+d' -o "$type" = 'd+m' ]; then
@@ -147,7 +147,7 @@ if [ "$type" = 'd+d' -o "$type" = 'd+m' ]; then
 fi
 
 #
-# Take the recording
+# Make the recording
 #
 
 case "$type" in

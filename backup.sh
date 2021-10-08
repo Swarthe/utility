@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# backup: Synchronise the filesystem to an external location with rsync,
+# backup: Synchronise the filesystem to an external location using rsync,
 #         assuming FHS compliance
 #
 # If using the BACKUP_TARGET environment variable, you can configure
@@ -47,8 +47,7 @@ Example: backup -lt /mnt/backup/
 Environment variables:
   BACKUP_TARGET     set the backup target location
 
-Note: Unless manually set, we will attempt to automatically determine the
-      target.
+Note: Unless manually set, we attempt to automatically determine the target.
 EOF
 }
 
@@ -127,8 +126,10 @@ while getopts :hvlis:t: opt; do
     esac
 done
 
+shift $((OPTIND-1))
+
 #
-# Attempt to determine target and related data if needed
+# Collect data
 #
 
 latest_source="$(df --output=source | tail -n 1)"

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# vimg: Display images with optional interactivity using feh
+#
+# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
+#
+# Subject to the MIT License. See LICENSE.txt for more information.
+#
+
+#
+# User I/O functions and variables
+#
+
+readonly normal="$(tput sgr0)"
+readonly bold="$(tput bold)"
+readonly bold_red="${bold}$(tput setaf 1)"
+
+usage ()
+{
+    cat << EOF
+Usage: vimg [OPTION]... [TARGET]...
+Display images with optional interactivity.
+
+Options:
+  -i    display interactive index of images
+  -l    output static list of files and metadata
+  -r    operate recursively
+  -h    display this help text
+
+Example: vimg -rl .
+
+Note: By default, images are shown in an interactive slideshow.
+      Try 'man feh' to learn how to use the image browser.
+EOF
+}
+
+err ()
+{
+    printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
+}
+
+#
+# Handle options
+#
+
+while getopts :hilr opt; do
+    case "${opt}" in
+    h)
+        usage; exit
+        ;;
+    i)
+        index=1
+        ;;
+    l)
+        list=1
+        ;;
+    r)
+        recursive=1
+        feh_opt='-r'
+        ;;
+    \?)
+        err "Invalid option '$OPTARG'"
+        printf '%s\n' "Try 'vimg -h' for more information."
+        exit 1
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+# Exit if '-i' and '-l' are passed simultaneously to avoid conflicts
+if [ $index ] && [ $list ]; then
+    err "Options 'i' and 'l' cannot be used simultaneously"
+    printf '%s\n' "Try 'vimg -h' for more information."
+    exit 1
+fi
+
+#
+# Display images
+#
+
+if [ $index ]; then
+    feh $feh_opt -Z.S filename --conversion-timeout 1 -t -E 256 -y 256 \
+    --index-info '%n\n%S\n%wx%h' "$*"
+elif [ $list ]; then
+    feh -l "$*"
+elif [ "$*" ]; then
+    feh $feh_opt -dZ.S filename --conversion-timeout 1 --no-jump-on-resort "$*"
+else
+    err "Missing target"
+    printf '%s\n' "Try 'ydl -h' for more information."
+    exit 1
+fi

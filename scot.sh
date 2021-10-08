@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# scot: Capture the display to clipboard or file with ImageMagick
+# scot: Capture the display to clipboard or file using ImageMagick
 #
 # An example configuration for i3 integration:
 #
@@ -42,7 +42,7 @@ Environment variables:
   SCOT_GRAPHICAL    '1' to enable graphical notifications, '0' to disable
   SCOT_TARGET       set the target for '-f'
 
-Note: By default, a rectangular selection will be captured.
+Note: By default, a rectangular selection is captured.
 EOF
 }
 
@@ -104,6 +104,8 @@ while getopts :hdg:f opt; do
         ;;
     esac
 done
+
+shift $((OPTIND-1))
 
 if [ "$graphical" ]; then
     err ()
