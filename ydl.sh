@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # ydl: Download video or audio media from the internet in an organised
-#      fashion with youtube-dl
+#      fashion using youtube-dl
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -18,6 +18,12 @@
 #
 # maybe maybe add env variables for default target and creator setting and other
 #
+# make it possible to specify several URLs in a row without having to pass
+# options repeatedly
+#
+# add possibility to add creator name to metadata as 'Artist' tag, with filename
+# as '[artist] - [title]', and 'Title' tag as '[title]'
+#
 
 #
 # User I/O functions and variables
@@ -30,20 +36,20 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: ydl [OPTION]... [URL] [-t] [TARGET]
+Usage: ydl [OPTION]... [URL]... [-t] [TARGET]
 Download video or audio media form the internet.
 
 Options:
-  -v    download video from the specified URL
-  -a    download audio from the specified URL
+  -a    download as audio from the specified URL
   -t    specify the target directory for download
   -c    prepend the creator's name to the filename
   -h    display this help text
 
 Example: ydl -a [URL] -t ~/video
 
-Note: You can pass the download options with an argument several times to
-      download from multiple different URLs sequentially.
+
+
+Note: Media is downloaded as video by default.
 EOF
 }
 
@@ -56,7 +62,7 @@ err ()
 # Handle options
 #
 
-while getopts :ht:v:a:c opt; do
+while getopts :ht:ac opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -65,36 +71,32 @@ while getopts :ht:v:a:c opt; do
         # add leading slash to avoid breaking youtube-dl
         target="$(realpath "$OPTARG")/"
         ;;
-    v)
-        url="$OPTARG"
-        ;;
     a)
-        url="$OPTARG"
         format='x'
         ;;
     c)
         creator="%(creator)s - "
         ;;
-    :)
-        err "Option '$OPTARG' requires an argument"
-        printf '%s\n' "Try 'backup -h' for more information."
-        exit 1
-        ;;
     \?)
         err "Invalid option '$OPTARG'"
-        printf '%s\n' "Try 'backup -h' for more information."
+        printf '%s\n' "Try 'ydl -h' for more information."
         exit 1
         ;;
     esac
 done
 
+shift $((OPTIND-1))
+
 #
 # Run the download
 #
-if [ $url ]; then
+
+if [ "$*" ]; then
+    # unquoted '$*' variable is very dangerous, but youtube-dl treats it as only
+    # one URL otherwise
     youtube-dl --add-header 'Cookie:' -${format}o \
-    "${target}${creator}%(title)s.%(ext)s" "$url"
+    "${target}${creator}%(title)s.%(ext)s" $*
 else
-    err "A valid URL must be passed with '-v' or '-a'"
-    printf '%s\n' "Try 'backup -h' for more information."
+    err "Missing URL"
+    printf '%s\n' "Try 'ydl -h' for more information."
 fi
