@@ -38,7 +38,7 @@ Options:
   -v    use verbose output
   -l    log to a file instead of stdout (implies '-v')
   -t    specify the backup target location (overrides 'BACKUP_TARGET')
-  -s    specify what safety measures to skip (use at your own peril); 'prompt'
+  -s    specify what safety features to skip (use at your own peril); 'prompt'
           to skip prompts, 'check' to skip checks, 'all' to skip everything
   -h    display this help text
 
@@ -127,19 +127,29 @@ while getopts :hvlis:t: opt; do
 done
 
 shift $((OPTIND-1))
+args=("$@")
+
+# do not permit extra arguments
+if [ "$args" ]; then
+    for c in "${args[@]}"; do
+         err "Invalid argument '$c'"
+    done
+
+    printf '%s\n' "Try 'backup -h' for more information."
+    exit 1
+fi
+
 
 #
 # Collect data
 #
 
-latest_source="$(df --output=source | tail -n 1)"
-
 if [ -z "$target" ]; then
     if [ "$BACKUP_TARGET" ]; then
         target="$(realpath "$BACKUP_TARGET")"
     # use latest mounted real filesystem
-    elif [ -e "$latest_source" ]; then
-        target="$(realpath "$latest_source")"
+    elif [ -e "$(df --output=source | tail -n 1)" ]; then
+        target="$(realpath "$(df --output=source | tail -n 1)")"
     else
         err "Could not determine a suitable target"
         printf '%s\n' "Try 'backup -h' for more information."
@@ -147,14 +157,14 @@ if [ -z "$target" ]; then
     fi
 fi
 
-[ -e "$target" ] \
-    && target_source="$(df --output=source "$target" | tail -n 1)"
+if [ -e "$target" ]; then
+    target_source="$(df --output=source "$target" | tail -n 1)"
+fi
 
-[ "$target_source" ] \
-    && target_target="$(df --output=target "$target" | tail -n 1)"
-
-[ "$target_source" ] \
-    && target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
+if [ "$target_source" ]; then
+    target_target="$(df --output=target "$target" | tail -n 1)"
+    target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
+fi
 
 #n_inode=$(df --output=iused / | tail -n 1)
 
@@ -193,24 +203,26 @@ if [ -z $skip_check ]; then
     if ! check_exclude; then
         err "Recursive backups are not permitted"
         printf '%s\n' "The target may be mounted to a non-standard location."
-        exit 2
+        recursive_backup=1
     fi
 
     if [ $(id -u) != 0 ]; then
         warn "We do not have root privileges"
     fi
 
-    if [ -d "$target" -a -w "$target" -a "$target_model" ]; then
-        if check_root; then
-            warn "Target drive '$target_model' is the root drive"
-            target_is_root=1
-        fi
+    if [ -d "$target" -a "$target_model" ]; then
+        if [ -w "$target" ]; then
+            if check_root; then
+                warn "Target drive '$target_model' is the root drive"
+                target_is_root=1
+            fi
 
-        if check_space; then
-            warn "Target drive '$target_model' has insufficient free space"
+            if check_space; then
+                warn "Target drive '$target_model' has insufficient free space"
+            fi
+        else
+            warn "Target '$target' is inaccessible"
         fi
-    elif [ -d "$target" -a "$target_model" ]; then
-        warn "Target '$target' is inaccessible"
     elif [ -e "$target" ]; then
         warn "Target '$target' is invalid"
     else
@@ -222,7 +234,21 @@ fi
 # Confirm or announce target
 #
 
-if [ -z "$skip_interact" ]; then
+if [ $skip_interact ]; then
+    if [ "$target_model" ]; then
+        info "Target is '$target' on '$target_model'"
+    else
+        info "Target is '$target'"
+    fi
+else
+    if [ $recursive_backup ]; then
+        if ask "Exclude '$target' from backup?"; then
+            rsync_exclude+="$target"
+        else
+            exit
+        fi
+    fi
+
     if [ "$target_model" ]; then
         ask "Backup to '$target' on '$target_model'?" \
             || exit 0
@@ -230,30 +256,25 @@ if [ -z "$skip_interact" ]; then
         ask "Backup to '$target'?" \
             || exit 0
     fi
-else
-    if [ "$target_model" ]; then
-        info "Target is '$target' on '$target_model'"
-    else
-        info "Target is '$target'"
-    fi
 fi
 
 #
 # Run the backup
 #
 
-if [ -z "$verbose" -a -z "$log" ]; then
-    # rsync progress indicator option
-    progress="--info=progress2"
+if [ "$verbose" -o "$log" ]; then
+    # verbose
+    rsync_opt="-v"
 else
-    # rsync verbose option
-    progress="-v"
+    # progress indicator
+    rsync_opt="--info=progress2"
 fi
 
-synchronise ()
+back ()
 {
-    rsync -aHAXE "$progress" --info=progress2 --delete / \
-    --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile"} \
+    # default exclusions should be proper for most cases
+    rsync -aHAXE "$rsync_opt" --delete / \
+    --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile","$rsync_exclude"} \
     "$target"
 }
 
@@ -265,17 +286,11 @@ clean ()
     fi
 }
 
-if [ -z "$log" ]; then
-    if synchronise && clean; then
-        exit
-    else
-        exit 3
-    fi
-else
+if [ "$log" ]; then
     log_file="$(realpath backup.log)"
 
     if [ -w . ]; then
-        synchronise &> "$log_file" &
+        back &> "$log_file" &
         rsync_pid=$!
         info "Log file is '$log_file'"
 
@@ -285,13 +300,13 @@ else
             wc -l < $log_file
         }
     else
-        synchronise &> /dev/null &
+        back &> /dev/null &
         rsync_pid=$!
         err "Could not create log file"
 
         file_count ()
         {
-            printf '%s' "?"
+            printf '?'
         }
     fi
 
@@ -307,7 +322,7 @@ else
         done
     done
 
-    printf '%b' "\n"
+    printf '\n'
 
     if wait $rsync_pid; then
         info "Backup successful"; clean
@@ -316,6 +331,13 @@ else
         err "Backup failed"
         [ -e $log_file ] \
             && printf '%s\n' "See '$log_file' for more information."
-        exit 3
+        exit 2
+    fi
+else
+    if back && clean; then
+        exit
+    else
+        exit 2
     fi
 fi
+

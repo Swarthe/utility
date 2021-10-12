@@ -83,16 +83,16 @@ while getopts :hd:cmf: opt; do
             printf '%s\n' "Try 'backup -h' for more information."
         fi
 
-        opt_count+=1
+        opt_count=$(($opt_count + 1))
         ;;
     c)
         # mpv can take pictures from camera feed
         type='c'
-        opt_count+=1
+        opt_count=$(($opt_count + 1))
         ;;
     m)
         type='m'
-        opt_count+=1
+        opt_count=$(($opt_count + 1))
         ;;
     f)
         if [ $OPTARG -gt 0 -a $OPTARG -le 480 ]; then
@@ -117,6 +117,17 @@ while getopts :hd:cmf: opt; do
 done
 
 shift $((OPTIND-1))
+args=("$@")
+
+# do not permit extra arguments
+if [ "$args" ]; then
+    for c in "${args[@]}"; do
+         err "Invalid argument '$c'"
+    done
+
+    printf '%s\n' "Try 'record -h' for more information."
+    exit 1
+fi
 
 # Exit if number of source options is null or greater than 1 to avoid conflicts
 # TODO: implement documented defaults, especially for frame rate

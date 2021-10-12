@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# ydl: Download video or audio media from the internet in an organised
-#      fashion using youtube-dl
+# ydl: Download video or audio media from the internet with metadata in an
+#      organised fashion using youtube-dl
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -16,13 +16,8 @@
 # youtube-dl --add-header 'Cookie:' --playlist-start $start --playlist-end \
 # $end -xo "%(creator)s - %(title)s.%(ext)s" "$url"
 #
-# maybe maybe add env variables for default target and creator setting and other
-#
-# make it possible to specify several URLs in a row without having to pass
-# options repeatedly
-#
-# add possibility to add creator name to metadata as 'Artist' tag, with filename
-# as '[artist] - [title]', and 'Title' tag as '[title]'
+# maybe maybe add env variables for default target (transient for us) and
+# creator setting and other
 #
 
 #
@@ -36,18 +31,16 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: ydl [OPTION]... [URL]... [-t] [TARGET]
+Usage: ydl [OPTION]... [-t] [TARGET] [URL]...
 Download video or audio media form the internet.
 
 Options:
-  -a    download as audio from the specified URL
-  -t    specify the target directory for download
+  -a    download media as audio
+  -t    specify the target directory for the download
   -c    prepend the creator's name to the filename
   -h    display this help text
 
-Example: ydl -a [URL] -t ~/video
-
-
+Example: ydl -ct ~/video [URL]
 
 Note: Media is downloaded as video by default.
 EOF
@@ -62,6 +55,9 @@ err ()
 # Handle options
 #
 
+# default youtube-dl options for video
+format='--embed-subs --all-subs'
+
 while getopts :ht:ac opt; do
     case "${opt}" in
     h)
@@ -72,7 +68,8 @@ while getopts :ht:ac opt; do
         target="$(realpath "$OPTARG")/"
         ;;
     a)
-        format='x'
+        # youtube-dl cannot embed subtitles in audio files
+        format='-x'
         ;;
     c)
         creator="%(creator)s - "
@@ -86,16 +83,15 @@ while getopts :ht:ac opt; do
 done
 
 shift $((OPTIND-1))
+args=("$@")
 
 #
 # Run the download
 #
 
-if [ "$*" ]; then
-    # unquoted '$*' variable is very dangerous, but youtube-dl treats it as only
-    # one URL otherwise
-    youtube-dl --add-header 'Cookie:' -${format}o \
-    "${target}${creator}%(title)s.%(ext)s" $*
+if [ "${args[@]}" ]; then
+    youtube-dl --embed-thumbnail --add-metadata $format --add-header 'Cookie:' \
+    -io "${target}${creator}%(title)s.%(ext)s" "${args[@]}"
 else
     err "Missing URL"
     printf '%s\n' "Try 'ydl -h' for more information."

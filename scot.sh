@@ -31,16 +31,16 @@ Capture the display.
 
 Options:
   -d    capture the entire display
-  -f    capture to a file
+  -t    capture to file in 'SCOT_TARGET'
   -g    specify 'on' to enable graphical notifications; specify 'off' to disable
           (overrides 'SCOT_GRAPHICAL')
   -h    display this help text
 
-Example: scot -nf
+Example: scot -df
 
 Environment variables:
-  SCOT_GRAPHICAL    '1' to enable graphical notifications, '0' to disable
-  SCOT_TARGET       set the target for '-f'
+  SCOT_GRAPHICAL    '1' to enable graphical notifications
+  SCOT_TARGET       set the target directory for '-f'
 
 Note: By default, a rectangular selection is captured.
 EOF
@@ -62,12 +62,8 @@ info ()
 
 if [ "$SCOT_GRAPHICAL" = 1 ]; then
     graphical=1
-elif [ "$SCOT_GRAPHICAL" = 0 ]; then
-    graphical=''
 else
-    err "Invalid argument '$OPTARG' for option 'g'"
-    printf '%s\n' "Try 'scot -h' for more information."
-    exit 1
+    graphical=''
 fi
 
 while getopts :hdg:f opt; do
@@ -90,7 +86,7 @@ while getopts :hdg:f opt; do
         fi
         ;;
     f)
-        file=1
+        target="$(realpath "$SCOT_TARGET")"
         ;;
     :)
         err "Option '$OPTARG' requires an argument"
@@ -106,6 +102,17 @@ while getopts :hdg:f opt; do
 done
 
 shift $((OPTIND-1))
+args=("$@")
+
+# do not permit extra arguments
+if [ "$args" ]; then
+    for c in "${args[@]}"; do
+         err "Invalid argument '$c'"
+    done
+
+    printf '%s\n' "Try 'scot -h' for more information."
+    exit 1
+fi
 
 if [ "$graphical" ]; then
     err ()
@@ -123,33 +130,27 @@ fi
 # Take the screenshot
 #
 
-if [ -z "$file" ]; then
-    if [ -z "$display" ]; then
-        import png:- | xclip -selection clipboard -t image/png
+if [ "$target" ]; then
+    real_target="${target}/screenshot.png"
+
+    # increment filename to avoid overwriting
+    while [ -e "$real_target" ]; do
+        i=$((i + 1))
+        real_target="${target}/screenshot-${i}.png"
+    done
+
+    if [ "$display" ]; then
+        import -window root "$real_target" 2> /dev/null
     else
-        import -window root png:- | xclip -selection clipboard -t image/png
+        import "$real_target" 2> /dev/null
     fi
 else
-    # increment filename to avoid overwriting
-    if [ "$SCOT_TARGET" ]; then
-        target="$(realpath "${SCOT_TARGET}/screenshot.png")"
-        while [ -e "$target" ]; do
-            i+=1
-            target="$(realpath "${SCOT_TARGET}/screenshot-${i}.png")"
-        done
+    if [ "$display" ]; then
+        import -window root png:- | xclip -selection clipboard -t image/png
     else
-        target="$(realpath screenshot.png)"
-        while [ -e "$target" ]; do
-            i+=1
-            target="$(realpath screenshot-${i}.png)"
-        done
+        import png:- | xclip -selection clipboard -t image/png
     fi
 
-    if [ -z "$display" ]; then
-        import "$target" 2> /dev/null
-    else
-        import -window root "$target" 2> /dev/null
-    fi
 fi
 
 #
@@ -157,16 +158,16 @@ fi
 #
 
 if [ "$graphical" ]; then
-    if [ -z "$file" ]; then
+    if [ -z "$target" ]; then
         info "Screenshot successful"
-    elif [ -e "$target" ]; then
-        info "Screenshot is '$target'"
+    elif [ -e "$real_target" ]; then
+        info "Screenshot is '$real_target'"
     else
         err "Could not save screenshot"
     fi
-elif [ "$file" ]; then
-    if [ -e "$target" ]; then
-        info "Screenshot is '$target'"
+elif [ "$target" ]; then
+    if [ -e "$real_target" ]; then
+        info "Screenshot is '$real_target'"
     else
         err "Could not save screenshot"
     fi

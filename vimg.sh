@@ -19,7 +19,7 @@ usage ()
 {
     cat << EOF
 Usage: vimg [OPTION]... [TARGET]...
-Display images with optional interactivity.
+Display images.
 
 Options:
   -i    display interactive index of images
@@ -67,6 +67,7 @@ while getopts :hilr opt; do
 done
 
 shift $((OPTIND-1))
+args=("$@")
 
 # Exit if '-i' and '-l' are passed simultaneously to avoid conflicts
 if [ $index ] && [ $list ]; then
@@ -81,13 +82,14 @@ fi
 
 if [ $index ]; then
     feh $feh_opt -Z.S filename --conversion-timeout 1 -t -E 256 -y 256 \
-    --index-info '%n\n%S\n%wx%h' "$*"
+    --index-info '%n\n%S\n%wx%h' "${args[@]}"
 elif [ $list ]; then
-    feh -l "$*"
-elif [ "$*" ]; then
-    feh $feh_opt -dZ.S filename --conversion-timeout 1 --no-jump-on-resort "$*"
+    feh $feh_opt -l "${args[@]}"
+elif [ "${args[@]}" ]; then
+    feh $feh_opt -dZ.S filename --conversion-timeout 1 --no-jump-on-resort \
+    "${args[@]}"
 else
     err "Missing target"
-    printf '%s\n' "Try 'ydl -h' for more information."
+    printf '%s\n' "Try 'vimg -h' for more information."
     exit 1
 fi
