@@ -8,6 +8,20 @@ Scripts to simplify common CLI actions (in development).
 - `ydl`     : Download video or audio media from the internet with metadata.
 - `vimg`    : Display images with optional interactivity.
 
+## Installation
+
+```
+git clone https://github.com/Swarthe/utility
+cd utility
+sudo ./install.sh
+```
+
+If you wish to remove leftover files:
+
+```
+cd ..
+rm -rf utility
+```
 ## Status
 
 - `backup` is a work-in-progress; MacOS testing is required.
