@@ -89,7 +89,7 @@ args=("$@")
 # Run the download
 #
 
-if [ "${args[@]}" ]; then
+if [ "$args" ]; then
     youtube-dl --embed-thumbnail --add-metadata $format --add-header 'Cookie:' \
     -io "${target}${creator}%(title)s.%(ext)s" "${args[@]}"
 else

@@ -24,6 +24,8 @@ Display images.
 Options:
   -i    display interactive index of images
   -l    output static list of files and metadata
+  -e    perform basic image editing (press '<', '>', '|', and '_' to mirror or
+          rotate)
   -r    operate recursively
   -h    display this help text
 
@@ -43,7 +45,7 @@ err ()
 # Handle options
 #
 
-while getopts :hilr opt; do
+while getopts :hiler opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -54,9 +56,12 @@ while getopts :hilr opt; do
     l)
         list=1
         ;;
+    e)
+        feh_opt+='--edit '
+        ;;
     r)
         recursive=1
-        feh_opt='-r'
+        feh_opt+='-r '
         ;;
     \?)
         err "Invalid option '$OPTARG'"
@@ -85,7 +90,7 @@ if [ $index ]; then
     --index-info '%n\n%S\n%wx%h' "${args[@]}"
 elif [ $list ]; then
     feh $feh_opt -l "${args[@]}"
-elif [ "${args[@]}" ]; then
+elif [ "$args" ]; then
     feh $feh_opt -dZ.S filename --conversion-timeout 1 --no-jump-on-resort \
     "${args[@]}"
 else

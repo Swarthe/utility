@@ -10,18 +10,18 @@
 #
 
 #
-# Collect/set information
+# Collect data
 #
 
 target="/usr/local/bin"
 system="$(uname)"
-repo_files="$(basename -s .sh src/*)"
+target_files="$(basename -s .sh src/*)"
 replaced_files=0
 
 # Count the number of files to be replaced
 while read -r f; do
     [ -e "${target}/$f" ] && replaced_files=$(($replaced_files + 1))
-done <<< "$repo_files"
+done <<< "$target_files"
 
 #
 # Run checks
@@ -31,6 +31,12 @@ if [ $(id -u) != 0 ]; then
     printf 'error: %s\n' "We do not have root privileges"
     printf '%s\n' "Try running this script with 'sudo'"
     exit 1
+fi
+
+if ! [ -e src ]; then
+    printf 'error: %s\n' "Necessary files not found"
+    printf '%s\n' "Try running this script in the root of the project directory"
+    exit 2
 fi
 
 case "$system" in
@@ -47,16 +53,20 @@ esac
 
 printf '\n'
 
+#
+# Run installation
+#
+
 printf '%s\n' "Target is $target"
-printf '%s\n' "$(wc -l <<< $repo_files) files to be installed"
+printf '%s\n' "$(wc -l <<< $target_files) files to be installed"
 printf '%s\n' "$replaced_files files to be replaced"
 printf '\n'
 
-cp -v src/backup.sh    "${target}/backup"  && chown root:root "${target}/backup"
-cp -v src/record.sh    "${target}/record"  && chown root:root "${target}/record"
-cp -v src/scot.sh      "${target}/scot"    && chown root:root "${target}/scot"
-cp -v src/vimg.sh      "${target}/vimg"    && chown root:root "${target}/vimg"
-cp -v src/ydl.sh       "${target}/ydl"     && chown root:root "${target}/ydl"
+install -v src/backup.sh    "${target}/backup"  -o root -g root
+install -v src/record.sh    "${target}/record"  -o root -g root
+install -v src/scot.sh      "${target}/scot"    -o root -g root
+install -v src/vimg.sh      "${target}/vimg"    -o root -g root
+install -v src/ydl.sh       "${target}/ydl"     -o root -g root
 printf '\n'
 
 printf '%s\n' "Installation complete"
