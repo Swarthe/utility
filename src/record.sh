@@ -45,7 +45,7 @@ Record or capture any combination of audio, display and camera.
 
 Options:
   -d    record the display and specify audio source ('+desktop' for desktop,
-          '+microphone' for microphone)
+          '+microphone' for microphone, '+none' to disable)
   -c    open a video feed of the camera to take a picture (by pressing 's')
   -m    record only microphone audio
   -f    specify the frame rate from 1 to 480 if recording the display; ignore
@@ -74,15 +74,23 @@ while getopts :hd:cmf: opt; do
         usage; exit
         ;;
     d)
-        if [ "$OPTARG" = "+desktop" ]; then
+        case "$OPTARG" in
+        +desktop)
             type='d+d'
-        elif [ "$OPTARG" = "+microphone" ]; then
+            ;;
+        +microphone)
             type='d+m'
-        else
+            ;;
+        +none)
+            type='d+n'
+            ;;
+        *)
             err "Invalid option '$OPTARG'"
             printf '%s\n' "Try 'backup -h' for more information."
-        fi
+            ;;
+        esac
 
+        video=1
         opt_count=$(($opt_count + 1))
         ;;
     c)
@@ -146,7 +154,7 @@ fi
 #
 
 # Collect or check for necessary information to record the display
-if [ "$type" = 'd+d' -o "$type" = 'd+m' ]; then
+if [ "$video" ]; then
     if [ $fps ]; then
         resolution="$(xdpyinfo | awk '/dimensions/{print $2}')"
     else
@@ -169,6 +177,9 @@ d+d)
 d+m)
     ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
     pulseeffects_source out.mkv
+    ;;
+d+n)
+    ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 out.mkv
     ;;
 m)
     ffmpeg -f pulse -i pulseeffects_source out.wav
