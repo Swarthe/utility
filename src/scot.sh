@@ -31,16 +31,16 @@ Capture the display.
 
 Options:
   -d    capture the entire display
-  -t    capture to file in 'SCOT_TARGET'
-  -g    specify 'on' to enable graphical notifications; specify 'off' to disable
-          (overrides 'SCOT_GRAPHICAL')
+  -t    capture to file in '\$SCOT_TARGET'
+  -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
+          (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
 
 Example: scot -df
 
 Environment variables:
-  SCOT_GRAPHICAL    '1' to enable graphical notifications
-  SCOT_TARGET       set the target directory for '-f'
+  SCOT_TARGET           set the target directory for '-f'
+  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
 
 Note: By default, a rectangular selection is captured.
 EOF
@@ -56,15 +56,21 @@ info ()
     printf '%binfo:%b %s\n' "$bold_blue" "$normal" "$*"
 }
 
+gerr ()
+{
+    notify-send -i \
+    /usr/share/icons/Papirus-Dark/32x32/apps/gnome-screenshot.svg \
+    -u critical 'scot' "$*"
+}
+
+ginfo ()
+{
+    notify-send -i "$real_target" 'scot' "$*"
+}
+
 #
 # Handle options
 #
-
-if [ "$SCOT_GRAPHICAL" = 1 ]; then
-    graphical=1
-else
-    graphical=''
-fi
 
 while getopts :hdg:f opt; do
     case "${opt}" in
@@ -75,15 +81,19 @@ while getopts :hdg:f opt; do
         display=1
         ;;
     g)
-        if [ "$OPTARG" = 'on' ]; then
-            graphical=1
-        elif [ "$OPTARG" = 'off' ]; then
-            graphical=''
-        else
+        case "$OPTARG" in
+        on)
+            graphical_override=1
+            ;;
+        off)
+            graphical_override=0
+            ;;
+        *)
             err "Invalid argument '$OPTARG' for option 'g'"
             printf '%s\n' "Try 'scot -h' for more information."
             exit 1
-        fi
+            ;;
+        esac
         ;;
     f)
         target="$(realpath "$SCOT_TARGET")"
@@ -114,17 +124,17 @@ if [ "$args" ]; then
     exit 1
 fi
 
-if [ "$graphical" ]; then
-    err ()
-    {
-        notify-send -u critical "scot" "$*"
-    }
-
-    info ()
-    {
-        notify-send -i "$target" "scot" "$*"
-    }
-fi
+# Determine whether or not to use graphical output
+case "$graphical_override" in
+1)
+    graphical=1
+    ;;
+0)
+    ;;
+*)
+    [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
+    ;;
+esac
 
 #
 # Take the screenshot
@@ -157,13 +167,11 @@ fi
 # Announce or notify
 #
 
-if [ "$graphical" ]; then
-    if [ -z "$target" ]; then
-        info "Screenshot successful"
-    elif [ -e "$real_target" ]; then
-        info "Screenshot is '$real_target'"
+if [ $graphical -a "$target" ]; then
+    if [ -e "$real_target" ]; then
+        ginfo "Screenshot is '$real_target'"
     else
-        err "Could not save screenshot"
+        gerr "Could not save screenshot"
     fi
 elif [ "$target" ]; then
     if [ -e "$real_target" ]; then

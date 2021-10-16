@@ -8,7 +8,9 @@
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
-# TODO: maybe add this as feature
+# TODO
+#
+# maybe add this as feature:
 #
 # Cool example command for audio playlists from YouTube ' - Topic' channels
 # which don't have artists name in title:
@@ -16,8 +18,11 @@
 # youtube-dl --add-header 'Cookie:' --playlist-start $start --playlist-end \
 # $end -xo "%(creator)s - %(title)s.%(ext)s" "$url"
 #
+#
 # maybe maybe add env variables for default target (transient for us) and
 # creator setting and other
+#
+# maybe add option for youtube-dl 'ytsearch'
 #
 
 #
@@ -38,11 +43,16 @@ Options:
   -a    download media as audio
   -t    specify the target directory for the download
   -c    prepend the creator's name to the filename
+  -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
+          (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
 
 Example: ydl -ct ~/video [URL]
 
-Note: Media is downloaded as video by default.
+Environment variables:
+  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
+
+Note: Media is downloaded as video in working directory by default.
 EOF
 }
 
@@ -51,14 +61,23 @@ err ()
     printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
 }
 
+gerr ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/32x32/apps/youtube-dl.svg \
+    -u critical 'ydl' "$*"
+}
+
+ginfo ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/32x32/apps/youtube-dl.svg \
+    'ydl' "$*"
+}
+
 #
 # Handle options
 #
 
-# default youtube-dl options for video
-format='--embed-subs --all-subs'
-
-while getopts :ht:ac opt; do
+while getopts :ht:acg: opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -74,6 +93,21 @@ while getopts :ht:ac opt; do
     c)
         creator="%(creator)s - "
         ;;
+    g)
+        case "$OPTARG" in
+        on)
+            graphical_override=1
+            ;;
+        off)
+            graphical_override=0
+            ;;
+        *)
+            err "Invalid argument '$OPTARG' for option 'g'"
+            printf '%s\n' "Try 'ydl -h' for more information."
+            exit 1
+            ;;
+        esac
+        ;;
     \?)
         err "Invalid option '$OPTARG'"
         printf '%s\n' "Try 'ydl -h' for more information."
@@ -85,13 +119,35 @@ done
 shift $((OPTIND-1))
 args=("$@")
 
+# Determine whether or not to use graphical output
+case "$graphical_override" in
+1)
+    graphical=1
+    ;;
+0)
+    ;;
+*)
+    [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
+    ;;
+esac
+
+# default youtube-dl options for video
+if [ -z "$format" ]; then
+    format='--embed-subs --all-subs'
+fi
+
 #
 # Run the download
 #
 
 if [ "$args" ]; then
-    youtube-dl --embed-thumbnail --add-metadata $format --add-header 'Cookie:' \
-    -io "${target}${creator}%(title)s.%(ext)s" "${args[@]}"
+    if youtube-dl --embed-thumbnail --add-metadata $format \
+       --add-header 'Cookie:' -io "${target}${creator}%(title)s.%(ext)s" \
+       "${args[@]}" && [ $graphical ]; then
+        ginfo "Download successful"
+    elif [ $graphical ]; then
+        ginfo "Download failed"
+    fi
 else
     err "Missing URL"
     printf '%s\n' "Try 'ydl -h' for more information."

@@ -3,10 +3,10 @@
 # backup: Synchronise the filesystem to an external location using rsync,
 #         assuming FHS compliance
 #
-# If using the BACKUP_TARGET environment variable, you can configure
-# sudo to preserve it by adding the following to your sudoers file:
+# If using the BACKUP_TARGET or UTILITY_GRAPHICAL environment variables, you can
+# configure sudo to preserve them by adding the following to your sudoers file:
 #
-#   Defaults env_keep += "BACKUP_TARGET"
+#   Defaults env_keep += "BACKUP_TARGET UTILITY_GRAPHICAL"
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -37,15 +37,18 @@ Synchronise the filesystem to an external location.
 Options:
   -v    use verbose output
   -l    log to a file instead of stdout (implies '-v')
-  -t    specify the backup target location (overrides 'BACKUP_TARGET')
+  -t    specify the backup target location (overrides '\$BACKUP_TARGET')
   -s    specify what safety features to skip (use at your own peril); 'prompt'
           to skip prompts, 'check' to skip checks, 'all' to skip everything
+  -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
+          (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
 
 Example: backup -lt /mnt/backup/
 
 Environment variables:
-  BACKUP_TARGET     set the backup target location
+  BACKUP_TARGET         set the backup target location
+  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
 
 Note: Unless manually set, we attempt to automatically determine the target.
 EOF
@@ -82,11 +85,31 @@ ask ()
     fi
 }
 
+gerr ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/22x22/actions/backup.svg \
+    -u critical 'backup' "$*"
+}
+
+ginfo ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/22x22/actions/backup.svg \
+    'backup' "$*"
+}
+
+gask ()
+{
+    zenity  --question \
+    --window-icon=/usr/share/icons/Papirus-Dark/22x22/actions/backup.svg \
+    --title 'backup' \
+    --text "$*"
+}
+
 #
 # Handle options
 #
 
-while getopts :hvlis:t: opt; do
+while getopts :hvlis:t:g: opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -101,17 +124,37 @@ while getopts :hvlis:t: opt; do
         target="$(realpath "$OPTARG")"
         ;;
     s)
-        if [ "$OPTARG" = "prompt" ]; then
+        case "$OPTARG" in
+        prompt)
             skip_interact=1
-        elif [ "$OPTARG" = "check" ]; then
+            ;;
+        check)
             skip_check=1
-        elif [ "$OPTARG" = "all" ]; then
+            ;;
+        all)
             skip_interact=1; skip_check=1
-        else
+            ;;
+        *)
             err "Invalid argument '$OPTARG' for option 's'"
-            printf '%s\n' "Try 'scot -h' for more information."
+            printf '%s\n' "Try 'backup -h' for more information."
             exit 1
-        fi
+            ;;
+        esac
+        ;;
+    g)
+        case "$OPTARG" in
+        on)
+            graphical_override=1
+            ;;
+        off)
+            graphical_override=0
+            ;;
+        *)
+            err "Invalid argument '$OPTARG' for option 'g'"
+            printf '%s\n' "Try 'backup -h' for more information."
+            exit 1
+            ;;
+        esac
         ;;
     :)
         err "Option '$OPTARG' requires an argument"
@@ -139,6 +182,17 @@ if [ "$args" ]; then
     exit 1
 fi
 
+# Determine whether or not to use graphical output
+case "$graphical_override" in
+1)
+    graphical=1
+    ;;
+0)
+    ;;
+*)
+    [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
+    ;;
+esac
 
 #
 # Collect data
@@ -286,6 +340,14 @@ clean ()
     fi
 }
 
+gclean ()
+{
+    if [ -z "$skip_interact" -a -z "$target_is_root" -a "$target_model" ]; then
+        gask "Unmount target drive '$target_model' at '$target_target'?" \
+            && umount "$target_target"
+    fi
+}
+
 if [ "$log" ]; then
     log_file="$(realpath backup.log)"
 
@@ -324,20 +386,37 @@ if [ "$log" ]; then
 
     printf '\n'
 
-    if wait $rsync_pid; then
-        info "Backup successful"; clean
-        exit
+    if [ $graphical ]; then
+        if wait $rsync_pid; then
+            ginfo "Backup successful"; gclean
+            exit
+        else
+            gerr "Backup failed"
+            [ -e $log_file ] \
+                && ginfo "See '$log_file' for more information."
+            exit 2
+        fi
     else
-        err "Backup failed"
-        [ -e $log_file ] \
-            && printf '%s\n' "See '$log_file' for more information."
-        exit 2
+        if wait $rsync_pid; then
+            info "Backup successful"; clean
+            exit
+        else
+            err "Backup failed"
+            [ -e $log_file ] \
+                && printf '%s\n' "See '$log_file' for more information."
+            exit 2
+        fi
     fi
 else
-    if back && clean; then
-        exit
-    else
+    if [ $graphical ]; then
+        if back; then
+            ginfo "Backup successful" && gclean
+            exit
+        else
+            gerr "Backup failed"
+            exit 2
+        fi
+    elif ! backup; then
         exit 2
     fi
 fi
-

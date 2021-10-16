@@ -3,24 +3,12 @@
 # record: Record or capture any combination of audio, display and camera using
 #         ffmpeg and mpv
 #
-# An example desktop file for the camera functionality:
-#
-#   [Desktop Entry]
-#   Type=Application
-#   Name=Camera
-#   GenericName=Picture taker
-#   Comment=Take a picture by pressing <s>
-#   Exec=record -c
-#   Icon=camera
-#   Categories=Graphics;
-#   Keywords=selfie;picture;
-#
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
-# TODO:
+# TODO
 #
 # check our i3 config for audio management keybindings for efficient ways to
 # manager pipewire devices instead of using pulseeffects devices
@@ -28,6 +16,9 @@
 # add support for recording from camera (also with audio)
 # add support for recording display with no audio (individual OPTARG management
 # for options)
+#
+# many problems with this script; fix
+#
 
 #
 # User I/O functions and variables
@@ -50,15 +41,32 @@ Options:
   -m    record only microphone audio
   -f    specify the frame rate from 1 to 480 if recording the display; ignore
           otherwise
+  -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
+          (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
 
 Example: record -d+m
+
+Environment variables:
+  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
 EOF
 }
 
 err ()
 {
     printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
+}
+
+gerr ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/22x22/actions/record.svg \
+    -u critical 'record' "$*"
+}
+
+ginfo ()
+{
+    notify-send -i /usr/share/icons/Papirus-Dark/24x24/actions/record.svg \
+    'record' "$*"
 }
 
 #
@@ -68,7 +76,7 @@ err ()
 # Serves to count the number of source options passed
 opt_count=0
 
-while getopts :hd:cmf: opt; do
+while getopts :hd:cmf:g: opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -111,6 +119,21 @@ while getopts :hd:cmf: opt; do
             exit 1
         fi
         ;;
+    g)
+        case "$OPTARG" in
+        on)
+            graphical_override=1
+            ;;
+        off)
+            graphical_override=0
+            ;;
+        *)
+            err "Invalid argument '$OPTARG' for option 'g'"
+            printf '%s\n' "Try 'backup -h' for more information."
+            exit 1
+            ;;
+        esac
+        ;;
     :)
         err "Option '$OPTARG' requires an argument"
         printf '%s\n' "Try 'record -h' for more information."
@@ -149,6 +172,18 @@ elif [ $opt_count -ne 1 ]; then
     exit 1
 fi
 
+# Determine whether or not to use graphical output
+case "$graphical_override" in
+1)
+    graphical=1
+    ;;
+0)
+    ;;
+*)
+    [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
+    ;;
+esac
+
 #
 # Collect data
 #
@@ -171,21 +206,40 @@ fi
 
 case "$type" in
 d+d)
-    ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
-    pulseeffects_sink out.mkv
+    if ! ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+       pulseeffects_sink out.mkv; then
+        [ $graphical ] && gerr "Recording failed"
+        exit 2
+    fi
     ;;
 d+m)
-    ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
-    pulseeffects_source out.mkv
+    if ! ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 -f pulse -i \
+       pulseeffects_source out.mkv; then
+        [ $graphical ] && gerr "Recording failed"
+        exit 2
+    fi
     ;;
 d+n)
-    ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 out.mkv
+    if ! ffmpeg -s "$resolution" -r "$fps" -f x11grab -i :0.0 out.mkv; then
+        [ $graphical ] && gerr "Recording failed"
+        exit 2
+    fi
     ;;
 m)
-    ffmpeg -f pulse -i pulseeffects_source out.wav
+    if ! ffmpeg -f pulse -i pulseeffects_source out.wav; then
+        [ $graphical ] && gerr "Recording failed"
+        exit 2
+    fi
     ;;
 c)
     # mpv can take pictures from camera feed
-    mpv av://v4l2:/dev/video0 --profile=low-latency --untimed
+    if ! mpv av://v4l2:/dev/video0 --profile=low-latency --untimed; then
+        if [ $graphical ]; then
+            gerr "Recording failed"
+            ginfo "The video device may be inaccessible"
+        fi
+
+        exit 2
+    fi
     ;;
 esac

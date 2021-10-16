@@ -13,14 +13,16 @@
 # Collect data
 #
 
-target="/usr/local/bin"
+bin_target="/usr/local/bin"
+desktop_target="/usr/share/applications"
 system="$(uname)"
-target_files="$(basename -s .sh src/*)"
+target_files="$(basename -s .sh src/*; basename -a data/*)"
 replaced_files=0
 
 # Count the number of files to be replaced
 while read -r f; do
-    [ -e "${target}/$f" ] && replaced_files=$(($replaced_files + 1))
+    [ -e "${bin_target}/$f" -o -e "${desktop_target}/$f" ] \
+        && replaced_files=$(($replaced_files + 1))
 done <<< "$target_files"
 
 #
@@ -57,16 +59,17 @@ printf '\n'
 # Run installation
 #
 
-printf '%s\n' "Target is $target"
+printf '%s\n' "Target for executables is $bin_target"
 printf '%s\n' "$(wc -l <<< $target_files) files to be installed"
 printf '%s\n' "$replaced_files files to be replaced"
 printf '\n'
 
-install -v src/backup.sh    "${target}/backup"  -o root -g root
-install -v src/record.sh    "${target}/record"  -o root -g root
-install -v src/scot.sh      "${target}/scot"    -o root -g root
-install -v src/vimg.sh      "${target}/vimg"    -o root -g root
-install -v src/ydl.sh       "${target}/ydl"     -o root -g root
+install -v src/backup.sh        "${bin_target}/backup"  -o root -g root
+install -v src/record.sh        "${bin_target}/record"  -o root -g root
+install -v src/scot.sh          "${bin_target}/scot"    -o root -g root
+install -v src/vimg.sh          "${bin_target}/vimg"    -o root -g root
+install -v src/ydl.sh           "${bin_target}/ydl"     -o root -g root
+install -v data/record.desktop  "$desktop_target"       -o root -g root
 printf '\n'
 
 printf '%s\n' "Installation complete"
