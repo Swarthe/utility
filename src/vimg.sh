@@ -18,7 +18,7 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: vimg [OPTION]... [TARGET]...
+Usage: vimg [OPTION]... [FILE]...
 Display images.
 
 Options:

@@ -31,7 +31,7 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: record [OPTION]...
+Usage: record [OPTION]... [-d] [VALUE]
 Record or capture any combination of audio, display and camera.
 
 Options:
@@ -48,7 +48,7 @@ Options:
 Example: record -d+m
 
 Environment variables:
-  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
+  UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 EOF
 }
 
@@ -122,14 +122,14 @@ while getopts :hd:cmf:g: opt; do
     g)
         case "$OPTARG" in
         on)
-            graphical_override=1
+            graphical=1
             ;;
         off)
-            graphical_override=0
+            graphical=0
             ;;
         *)
             err "Invalid argument '$OPTARG' for option 'g'"
-            printf '%s\n' "Try 'backup -h' for more information."
+            printf '%s\n' "Try 'record -h' for more information."
             exit 1
             ;;
         esac
@@ -173,16 +173,11 @@ elif [ $opt_count -ne 1 ]; then
 fi
 
 # Determine whether or not to use graphical output
-case "$graphical_override" in
-1)
-    graphical=1
-    ;;
-0)
-    ;;
-*)
+if [ -z $graphical ] && [ "$graphical" != 0 ]; then
     [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
-    ;;
-esac
+else
+    [ "$graphical" = 0 ] && graphical=''
+fi
 
 #
 # Collect data

@@ -14,6 +14,14 @@
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
 
+# TODO
+#
+# perform proper permission checks before running import with error like "Could
+# not save screenshot" if failed, in which case maybe add fallback to screenshot
+# to clipboard instead (announced)
+#
+# see if more info can be added to errors also in other scripts
+
 #
 # User I/O functions and variables
 #
@@ -26,7 +34,7 @@ readonly bold_blue="${bold}$(tput setaf 4)"
 usage ()
 {
     cat << EOF
-Usage: scot [OPTION]... [-g] [VALUE]
+Usage: scot [OPTION]...
 Capture the display.
 
 Options:
@@ -40,9 +48,10 @@ Example: scot -df
 
 Environment variables:
   SCOT_TARGET           set the target directory for '-f'
-  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
+  UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 
-Note: By default, a rectangular selection is captured.
+Note: By default, a rectangular selection is captured, and in current working
+      directory if '-f' is passed.
 EOF
 }
 
@@ -83,10 +92,10 @@ while getopts :hdg:f opt; do
     g)
         case "$OPTARG" in
         on)
-            graphical_override=1
+            graphical=1
             ;;
         off)
-            graphical_override=0
+            graphical=0
             ;;
         *)
             err "Invalid argument '$OPTARG' for option 'g'"
@@ -96,7 +105,11 @@ while getopts :hdg:f opt; do
         esac
         ;;
     f)
-        target="$(realpath "$SCOT_TARGET")"
+        if [ $SCOT_TARGET ]; then
+            target="$(realpath "$SCOT_TARGET")"
+        else
+            target='.'
+        fi
         ;;
     :)
         err "Option '$OPTARG' requires an argument"
@@ -125,16 +138,11 @@ if [ "$args" ]; then
 fi
 
 # Determine whether or not to use graphical output
-case "$graphical_override" in
-1)
-    graphical=1
-    ;;
-0)
-    ;;
-*)
+if [ -z $graphical ] && [ "$graphical" != 0 ]; then
     [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
-    ;;
-esac
+else
+    [ "$graphical" = 0 ] && graphical=''
+fi
 
 #
 # Take the screenshot
@@ -167,7 +175,7 @@ fi
 # Announce or notify
 #
 
-if [ $graphical -a "$target" ]; then
+if [ $graphical ] && [ "$target" ]; then
     if [ -e "$real_target" ]; then
         ginfo "Screenshot is '$real_target'"
     else

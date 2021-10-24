@@ -22,6 +22,19 @@ If you wish to remove leftover files:
 cd ..
 rm -rf utility
 ```
+
+If you wish to update the software:
+
+```
+cd utility
+git pull origin
+sudo ./install.sh
+```
+
+## Usage
+
+Manuals for every script can be displayed with the `-h` command-line option.
+
 ## Status
 
 - `backup` is a work-in-progress; MacOS testing is required.

@@ -70,6 +70,3 @@ install -v src/scot.sh          "${bin_target}/scot"    -o root -g root
 install -v src/vimg.sh          "${bin_target}/vimg"    -o root -g root
 install -v src/ydl.sh           "${bin_target}/ydl"     -o root -g root
 install -v data/record.desktop  "$desktop_target"       -o root -g root
-printf '\n'
-
-printf '%s\n' "Installation complete"

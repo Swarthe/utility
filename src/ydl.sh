@@ -50,9 +50,9 @@ Options:
 Example: ydl -ct ~/video [URL]
 
 Environment variables:
-  UTILITY_GRAPHICAL     '1' to enable graphical user I/O
+  UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 
-Note: Media is downloaded as video in working directory by default.
+Note: Media is downloaded as video in current working directory by default.
 EOF
 }
 
@@ -96,10 +96,10 @@ while getopts :ht:acg: opt; do
     g)
         case "$OPTARG" in
         on)
-            graphical_override=1
+            graphical=1
             ;;
         off)
-            graphical_override=0
+            graphical=0
             ;;
         *)
             err "Invalid argument '$OPTARG' for option 'g'"
@@ -120,16 +120,11 @@ shift $((OPTIND-1))
 args=("$@")
 
 # Determine whether or not to use graphical output
-case "$graphical_override" in
-1)
-    graphical=1
-    ;;
-0)
-    ;;
-*)
+if [ -z $graphical ] && [ "$graphical" != 0 ]; then
     [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
-    ;;
-esac
+else
+    [ "$graphical" = 0 ] && graphical=''
+fi
 
 # default youtube-dl options for video
 if [ -z "$format" ]; then
@@ -143,12 +138,14 @@ fi
 if [ "$args" ]; then
     if youtube-dl --embed-thumbnail --add-metadata $format \
        --add-header 'Cookie:' -io "${target}${creator}%(title)s.%(ext)s" \
-       "${args[@]}" && [ $graphical ]; then
-        ginfo "Download successful"
-    elif [ $graphical ]; then
-        ginfo "Download failed"
+       "${args[@]}"; then
+        [ $graphical ] && ginfo "Download successful"
+    else
+        [ $graphical ] && gerr "Download failed"
+        exit 2
     fi
 else
     err "Missing URL"
     printf '%s\n' "Try 'ydl -h' for more information."
+    exit 1
 fi
