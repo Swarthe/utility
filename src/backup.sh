@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# backup: Synchronise the filesystem to an external location using rsync,
-#         assuming FHS compliance
+# backup: Synchronise the filesystem to or from an external location using
+#         rsync, assuming FHS compliance
 #
 # If using the BACKUP_TARGET or BACKUP_LINK_DIR environment variables, you can
 # configure sudo to preserve them by adding the following to your sudoers file:
@@ -37,7 +37,7 @@ usage ()
 {
     cat << EOF
 Usage: backup [OPTION]... [-s] [VALUE] [-t] [TARGET]
-Synchronise the filesystem to an external location.
+Synchronise the filesystem to or from an external location.
 
 Options:
   -v    use verbose output
@@ -46,6 +46,7 @@ Options:
   -L    specify directory from which to hardlink identical files to target;
          useful for saving disk space with multiple backups on one drive
          (overrides '\$BACKUP_LINK_DIR')
+  -o    specify the backup origin location (useful to recover backups)
   -s    specify what safety features to skip (use at your own peril); 'prompt'
           to skip prompts, 'check' to skip checks, 'all' to skip everything
   -h    display this help text
@@ -95,7 +96,7 @@ ask ()
 # Handle options
 #
 
-while getopts :hvlis:t:L: opt; do
+while getopts :hvlit:L:o:s: opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -111,6 +112,9 @@ while getopts :hvlis:t:L: opt; do
         ;;
     L)
         link_dir="$(realpath "$OPTARG")"
+        ;;
+    o)
+        origin="$(realpath "$OPTARG")"
         ;;
     s)
         case "$OPTARG" in
@@ -172,6 +176,9 @@ else
     rsync_opt+="--info=progress2 "
 fi
 
+# Backup from root by default
+[ -z "$origin" ] && origin='/'
+
 #
 # Collect data
 #
@@ -198,6 +205,15 @@ if [ "$target_source" ]; then
     target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
 fi
 
+if [ -e "$origin" ]; then
+    origin_source="$(df --output=source "$origin" | tail -n 1)"
+fi
+
+if [ "$origin_source" ]; then
+    origin_target="$(df --output=target "$origin" | tail -n 1)"
+    origin_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$origin_source")")"
+fi
+
 #n_inode=$(df --output=iused / | tail -n 1)
 
 #
@@ -209,25 +225,29 @@ if [ -z $skip_check ]; then
     {
         # succeed if target is in excluded dirs
         # get first element in path (ugly)
-        case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
-        /dev|/proc|/sys|/tmp|/run|/mnt)
-            return
-            ;;
-        esac
+        # it is useless if the origin is on a different drive as it could never
+        # be recursive
+        if [ "$origin" != '/' ]; then
+            case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
+            /dev|/proc|/sys|/tmp|/run|/mnt)
+                return
+                ;;
+            esac
+        fi
 
         return 1
     }
 
-    check_root ()
+    check_same_fs ()
     {
-        # succeed if root
-        [ "$target_target" = "/" ]
+        # succeed if same filesystem
+        [ "$target_target" = "$origin_target" ]
     }
 
     check_space ()
     {
         # succeed if not enough space
-        [ $(df --output=used -k / | tail -n 1) \
+        [ $(df --output=used -k "$origin" | tail -n 1) \
         -gt $(df --output=size -k "$target" | tail -n 1) ]
     }
 
@@ -244,13 +264,19 @@ if [ -z $skip_check ]; then
 
     if [ -d "$target" -a "$target_model" ]; then
         if [ -w "$target" ]; then
-            if check_root; then
-                warn "Target drive '$target_model' is the root drive"
-                target_is_root=1
-            fi
+            if [ -r "$origin" ]; then
+                if check_same_fs; then
+                    warn "Target and origin are on the same drive; '$target_model'"
+                    same_fs=1
+                fi
 
-            if check_space; then
-                warn "Target drive '$target_model' has insufficient free space"
+                if check_space; then
+                    warn "Target drive '$target_model' has insufficient free space"
+                fi
+            elif [ -e "$origin" ]; then
+                warn "Origin '$origin' is inaccessible"
+            else
+                warn "Origin '$origin' does not exist"
             fi
         else
             warn "Target '$target' is inaccessible"
@@ -260,38 +286,68 @@ if [ -z $skip_check ]; then
     else
         warn "Target '$target' does not exist"
     fi
+
+    if [ "$link_dir" ]; then
+        if ! [ -e "$link_dir" ]; then
+            warn "Link directory '$link_dir' does not exist"
+            no_link=1
+        elif ! [ -r "$link_dir" ]; then
+            warn "Link directory '$link_dir' is inaccessible"
+            no_link=1
+        fi
+    fi
 fi
 
 #
 # Confirm or announce target and related information
 #
 
-if [ "$link_dir" ]; then
+if [ "$link_dir" ] && [ -z $no_link ]; then
     info "Identical files will be hardlinked from '$link_dir' to '$target'"
 fi
 
 if [ $skip_interact ]; then
-    if [ "$target_model" ]; then
-        info "Target is '$target' on '$target_model'"
+    [ $recursive_backup ] && exit 2
+
+    if [ "$origin" != '/' ]; then
+        if [ "$target_model" ]; then
+            info "Target is '$target' on '$target_model'"
+        else
+            info "Target is '$target'"
+        fi
     else
-        info "Target is '$target'"
+        if [ "$target_model" ] && [ "$origin_model" ]; then
+            info "Origin is '$origin' on '$origin_model'; target is '$target' on '$target_model'"
+        else
+            info "Origin is '$origin'; Target is '$target'"
+        fi
     fi
 else
     # recursive_backup is never declared if checks are skipped
     if [ $recursive_backup ]; then
         if ask "Exclude '$target' from backup?"; then
-            rsync_exclude+="$target"
+            rsync_exclude="$target"
         else
             exit
         fi
     fi
 
-    if [ "$target_model" ]; then
-        ask "Backup to '$target' on '$target_model'?" \
-            || exit 0
+    if [ "$origin" != '/' ]; then
+        if [ "$target_model" ]; then
+            ask "Backup to '$target' on '$target_model'?" \
+                || exit 0
+        else
+            ask "Backup to '$target'?" \
+                || exit 0
+        fi
     else
-        ask "Backup to '$target'?" \
-            || exit 0
+        if [ "$target_model" ] && [ "$origin_model" ]; then
+            ask "Backup from '$origin' on '$origin_model to '$target' on '$target_model'?" \
+                || exit 0
+        else
+            ask "Backup from '$origin' to '$target'?" \
+                || exit 0
+        fi
     fi
 fi
 
@@ -302,16 +358,21 @@ fi
 back ()
 {
     # default exclusions should be proper for most cases
-    rsync -aHAXE $rsync_opt --delete / \
-    --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile","$rsync_exclude"} \
+    rsync -aHAXE $rsync_opt --delete "$origin" \
+    --exclude={"${origin}/dev/*","${origin}/proc/*","${origin}/sys/*","${origin}/tmp/*","${origin}/run/*","${origin}/mnt/*","${origin}/lost+found","${origin}/swapfile","${origin}$rsync_exclude"} \
     "$target"
 }
 
 clean ()
 {
-    if [ -z "$skip_interact" -a -z "$target_is_root" -a "$target_model" ]; then
-        ask "Unmount target drive '$target_model' at '$target_target'?" \
-            && umount "$target_target"
+    if [ -z "$skip_interact" -a -z "$same_fs" ]; then
+        if [ "$target_model" ]; then
+            ask "Unmount target drive '$target_model' at '$target_target'?" \
+                && umount "$target_target"
+        elif [ "$origin" != '/' -a "$origin_model" ]; then
+            ask "Unmount origin drive '$origin_model' at '$origin_target'?" \
+                && umount "$origin_target"
+        fi
     fi
 }
 
@@ -360,10 +421,10 @@ if [ "$log" ]; then
         err "Backup failed"
         [ -e $log_file ] \
             && printf '%s\n' "See '$log_file' for more information."
-        exit 2
+        exit 3
     fi
 else
     if ! back; then
-        exit 2
+        exit 3
     fi
 fi
