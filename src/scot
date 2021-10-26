@@ -78,7 +78,7 @@ ginfo ()
 }
 
 #
-# Handle options
+# Handle arguments
 #
 
 while getopts :hdg:f opt; do

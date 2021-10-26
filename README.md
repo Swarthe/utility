@@ -13,22 +13,22 @@ Scripts to simplify common CLI actions (in development).
 ```
 git clone https://github.com/Swarthe/utility
 cd utility
-sudo ./install.sh
+sudo make install
 ```
 
-If you wish to remove leftover files:
-
-```
-cd ..
-rm -rf utility
-```
-
-If you wish to update the software:
+To update:
 
 ```
 cd utility
 git pull origin
-sudo ./install.sh
+sudo make install
+```
+
+To uninstall:
+
+```
+cd utility
+sudo make uninstall
 ```
 
 ## Usage

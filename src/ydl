@@ -74,7 +74,7 @@ ginfo ()
 }
 
 #
-# Handle options
+# Handle arguments
 #
 
 while getopts :ht:acg: opt; do
@@ -145,7 +145,7 @@ if [ "$args" ]; then
         exit 2
     fi
 else
-    err "Missing URL"
+    err "Missing argument"
     printf '%s\n' "Try 'ydl -h' for more information."
     exit 1
 fi

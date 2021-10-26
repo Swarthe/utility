@@ -93,7 +93,7 @@ ask ()
 }
 
 #
-# Handle options
+# Handle arguments
 #
 
 while getopts :hvlit:L:o:s: opt; do

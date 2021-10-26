@@ -70,7 +70,7 @@ ginfo ()
 }
 
 #
-# Handle options
+# Handle arguments
 #
 
 # Serves to count the number of source options passed

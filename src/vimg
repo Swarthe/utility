@@ -42,7 +42,7 @@ err ()
 }
 
 #
-# Handle options
+# Handle arguments
 #
 
 while getopts :hiler opt; do
@@ -94,7 +94,7 @@ elif [ "$args" ]; then
     feh $feh_opt -dZ.S filename --conversion-timeout 1 --no-jump-on-resort \
     "${args[@]}"
 else
-    err "Missing target"
+    err "Missing argument"
     printf '%s\n' "Try 'vimg -h' for more information."
     exit 1
 fi
