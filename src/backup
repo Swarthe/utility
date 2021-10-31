@@ -3,10 +3,10 @@
 # backup: Synchronise the filesystem to or from an external location using
 #         rsync, assuming FHS compliance
 #
-# If using the BACKUP_TARGET or BACKUP_LINK_DIR environment variables, you can
+# If using the environment variables specified in the help text, you can
 # configure sudo to preserve them by adding the following to your sudoers file:
 #
-#   Defaults env_keep += "BACKUP_TARGET BACKUP_LINK_DIR"
+#   Defaults env_keep += "BACKUP_TARGET BACKUP_LINK_DIR BACKUP_MOUNT"
 #
 # Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -56,8 +56,11 @@ Example: backup -lt /mnt/backup/
 Environment variables:
   BACKUP_TARGET         set the backup target location
   BACKUP_LINK_DIR       set the directory for '-L'
+  BACKUP_MOUNT          if set, automatically mount the specified UUID to '/mnt'
+                        (do not use if your system already automounts)
 
 Note: Unless manually set, we attempt to automatically determine the target.
+      By default, the backup origin is the root of the filesystem.
 EOF
 }
 
@@ -180,6 +183,26 @@ fi
 [ -z "$origin" ] && origin='/'
 
 #
+# Auto mount device
+#
+
+# This check must be done early because mounting required root privileges
+if [ $(id -u) != 0 ]; then
+    warn "We do not have root privileges; functionality may be limited"
+fi
+
+if [ "$BACKUP_MOUNT" ]; then
+    if mount -U "$BACKUP_MOUNT" /mnt &> /dev/null; then
+        info "Mounted '$BACKUP_MOUNT' to '/mnt'"
+    else
+        err "Could not mount '$BACKUP_MOUNT'"
+        printf '%s\n' "The drive may be inaccessible; try 'mount \"$BACKUP_MOUNT\"' to check"
+    fi
+fi
+
+
+
+#
 # Collect data
 #
 
@@ -189,6 +212,7 @@ if [ -z "$target" ]; then
     # use latest mounted real filesystem
     elif [ -e "$(df --output=source | tail -n 1)" ]; then
         target="$(realpath "$(df --output=source | tail -n 1)")"
+        info "Falling back to '$target' as target"
     else
         err "Could not determine a suitable target"
         printf '%s\n' "Try 'backup -h' for more information."
@@ -202,7 +226,7 @@ fi
 
 if [ "$target_source" ]; then
     target_target="$(df --output=target "$target" | tail -n 1)"
-    target_model="$(lsblk -no MODEL /dev/"$(lsblk -no PKNAME "$target_source")")"
+    target_model="$(lsblk -no MODEL "/dev/$(lsblk -no PKNAME "$target_source")")"
 fi
 
 if [ -e "$origin" ]; then
@@ -254,12 +278,11 @@ if [ -z $skip_check ]; then
     # a recursive backup would be extremely dangerous for the filesystem
     if ! check_exclude; then
         err "Recursive backups are not permitted"
-        printf '%s\n' "The target may be mounted to a non-standard location."
+        if [ "$origin" = '/' ]; then
+            # User likely does not intend to backup normally if origin is set
+            printf '%s\n' "The target may be mounted to a non-standard location."
+        fi
         recursive_backup=1
-    fi
-
-    if [ $(id -u) != 0 ]; then
-        warn "We do not have root privileges"
     fi
 
     if [ -d "$target" -a "$target_model" ]; then
@@ -290,10 +313,10 @@ if [ -z $skip_check ]; then
     if [ "$link_dir" ]; then
         if ! [ -e "$link_dir" ]; then
             warn "Link directory '$link_dir' does not exist"
-            no_link=1
+            no_link_dir=1
         elif ! [ -r "$link_dir" ]; then
             warn "Link directory '$link_dir' is inaccessible"
-            no_link=1
+            no_link_dir=1
         fi
     fi
 fi
@@ -302,14 +325,14 @@ fi
 # Confirm or announce target and related information
 #
 
-if [ "$link_dir" ] && [ -z $no_link ]; then
+if [ "$link_dir" ] && [ -z $no_link_dir ]; then
     info "Identical files will be hardlinked from '$link_dir' to '$target'"
 fi
 
 if [ $skip_interact ]; then
     [ $recursive_backup ] && exit 2
 
-    if [ "$origin" != '/' ]; then
+    if [ "$origin" = '/' ]; then
         if [ "$target_model" ]; then
             info "Target is '$target' on '$target_model'"
         else
@@ -328,11 +351,11 @@ else
         if ask "Exclude '$target' from backup?"; then
             rsync_exclude="$target"
         else
-            exit
+            warn "You may permanently lose data"
         fi
     fi
 
-    if [ "$origin" != '/' ]; then
+    if [ "$origin" = '/' ]; then
         if [ "$target_model" ]; then
             ask "Backup to '$target' on '$target_model'?" \
                 || exit 0
@@ -357,10 +380,17 @@ fi
 
 back ()
 {
-    # default exclusions should be proper for most cases
-    rsync -aHAXE $rsync_opt --delete "$origin" \
-    --exclude={"${origin}/dev/*","${origin}/proc/*","${origin}/sys/*","${origin}/tmp/*","${origin}/run/*","${origin}/mnt/*","${origin}/lost+found","${origin}/swapfile","${origin}$rsync_exclude"} \
-    "$target"
+    if [ "$origin" = '/' ]; then
+        # default exclusions should be proper for most cases
+        rsync -aHAXE $rsync_opt --delete "$origin" \
+        --exclude={"/dev/*","/proc/*","/sys/*","/tmp/*","/run/*","/mnt/*","/lost+found","/swapfile","$rsync_exclude"} \
+        "$target"
+    else
+        # exclude directories entirely to avoid unnecessarily deleting contents
+        rsync -aHAXE $rsync_opt --delete "$origin" \
+        --exclude={"${origin}/dev/","${origin}/proc/","${origin}/sys/","${origin}/tmp/","${origin}/run/","${origin}/mnt/","${origin}/lost+found","${origin}/swapfile","$rsync_exclude"} \
+        "$target"
+    fi
 }
 
 clean ()

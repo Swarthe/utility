@@ -18,7 +18,8 @@
 #
 # perform proper permission checks before running import with error like "Could
 # not save screenshot" if failed, in which case maybe add fallback to screenshot
-# to clipboard instead (announced)
+# to clipboard instead (announced). similarly, test returns of relevant commands
+# instead of results like file existing
 #
 # see if more info can be added to errors also in other scripts
 
@@ -106,7 +107,7 @@ while getopts :hdg:f opt; do
         ;;
     f)
         if [ $SCOT_TARGET ]; then
-            target="$(realpath "$SCOT_TARGET")"
+            target="$SCOT_TARGET"
         else
             target='.'
         fi
