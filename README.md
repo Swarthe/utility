@@ -51,7 +51,8 @@ table below.
 | scot        | ✓         | x            |
 | vimg        | ✓         | -            |
 
-More testing is needed for other systems.
+More testing is needed for other systems, but all dependencies should be
+installed or available on GNU/Linux distributions.
 
 ## License
 

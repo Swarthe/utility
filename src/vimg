@@ -22,8 +22,8 @@ Usage: vimg [OPTION]... [FILE]...
 Display images.
 
 Options:
-  -i    display interactive index of images
-  -l    output static list of files and metadata
+  -i    display an interactive index of images
+  -l    output a static list of files and metadata
   -e    perform basic image editing (press '<', '>', '|', and '_' to mirror or
           rotate)
   -r    operate recursively

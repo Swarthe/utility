@@ -51,8 +51,8 @@ Environment variables:
   SCOT_TARGET           set the target directory for '-f'
   UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 
-Note: By default, a rectangular selection is captured, and in current working
-      directory if '-f' is passed.
+Note: By default, a rectangular selection is captured, and in the current
+        working directory if '-f' is passed.
 EOF
 }
 

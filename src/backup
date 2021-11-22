@@ -16,17 +16,12 @@
 # not careful. Please report bugs at <https://github.com/Swarthe/utility>.
 #
 
-# TODO
-#
-# maybe add possibility for true incremental backups with --link-dest
-#
-
 #
 # User I/O functions and variables
 #
 
 readonly normal="$(tput sgr0)"
-readonly clear_line="$(tput cr && tput el 1)"
+readonly clear_line="$(tput cr && tput el)"
 readonly bold="$(tput bold)"
 readonly bold_red="${bold}$(tput setaf 1)"
 readonly bold_yellow="${bold}$(tput setaf 3)"
@@ -43,10 +38,10 @@ Options:
   -v    use verbose output
   -l    log to a file instead of stdout (implies '-v')
   -t    specify the backup target location (overrides '\$BACKUP_TARGET')
+  -o    specify the backup origin location (useful to recover backups)
   -L    specify directory from which to hardlink identical files to target;
          useful for saving disk space with multiple backups on one drive
          (overrides '\$BACKUP_LINK_DIR')
-  -o    specify the backup origin location (useful to recover backups)
   -s    specify what safety features to skip (use at your own peril); 'prompt'
           to skip prompts, 'check' to skip checks, 'all' to skip everything
   -h    display this help text
@@ -57,7 +52,7 @@ Environment variables:
   BACKUP_TARGET         set the backup target location
   BACKUP_LINK_DIR       set the directory for '-L'
   BACKUP_MOUNT          if set, automatically mount the specified UUID to '/mnt'
-                        (do not use if your system already automounts)
+                          (do not use if your system already automounts)
 
 Note: Unless manually set, we attempt to automatically determine the target.
       By default, the backup origin is the root of the filesystem.
@@ -248,15 +243,17 @@ if [ -z $skip_check ]; then
     check_exclude ()
     {
         # succeed if target is in excluded dirs
-        # get first element in path (ugly)
-        # it is useless if the origin is on a different drive as it could never
-        # be recursive
-        if [ "$origin" != '/' ]; then
+
+        # Get first element in path (ugly). It is useless if the origin is on a
+        # different drive as it could never be recursive.
+        if [ "$origin" = '/' ]; then
             case "$(sed 's/\/[^/]*//2g' <<< "$target")" in
             /dev|/proc|/sys|/tmp|/run|/mnt)
-                return
+                return 0
                 ;;
             esac
+        else
+            return 0
         fi
 
         return 1

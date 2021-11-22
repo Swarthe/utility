@@ -41,8 +41,8 @@ Download video or audio media form the internet.
 
 Options:
   -a    download media as audio
-  -t    specify the target directory for the download
   -c    prepend the creator's name to the filename
+  -t    specify the target directory for the download
   -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
           (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
@@ -84,11 +84,11 @@ while getopts :ht:acg: opt; do
         ;;
     t)
         # add leading slash to avoid breaking youtube-dl
-        target="$(realpath "$OPTARG")/"
+        target="${OPTARG}/"
         ;;
     a)
         # youtube-dl cannot embed subtitles in audio files
-        format='-x'
+        file_format='-x'
         ;;
     c)
         creator="%(creator)s - "
@@ -126,19 +126,27 @@ else
     [ "$graphical" = 0 ] && graphical=''
 fi
 
-# default youtube-dl options for video
-if [ -z "$format" ]; then
-    format='--embed-subs --all-subs'
-fi
-
 #
 # Run the download
 #
 
+# Default youtube-dl options for video
+if [ -z "$file_format" ]; then
+    file_format='--embed-subs --all-subs'
+fi
+
+# Construct youtube-dl options
+# IPv4 and cookie header for compatibility
+ydl_options=('--embed-thumbnail' '--add-metadata' "$file_format"
+             '--add-header' 'Cookie:' '-4io'
+             "${target}${creator}%(title)s.%(ext)s")
+
+# Exit immediately on SIGINT to avoid announcing failure when the user intended
+# to exit anyway
+trap 'exit 2' INT
+
 if [ "$args" ]; then
-    if youtube-dl --embed-thumbnail --add-metadata $format \
-       --add-header 'Cookie:' -io "${target}${creator}%(title)s.%(ext)s" \
-       "${args[@]}"; then
+    if youtube-dl "${ydl_options[@]}" "${args[@]}"; then
         [ $graphical ] && ginfo "Download successful"
     else
         [ $graphical ] && gerr "Download failed"
