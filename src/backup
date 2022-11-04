@@ -8,7 +8,7 @@
 #
 #   Defaults env_keep += "BACKUP_TARGET BACKUP_LINK_DIR BACKUP_MOUNT"
 #
-# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
+# Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
@@ -50,7 +50,7 @@ Example: backup -lt /mnt/backup/
 
 Environment variables:
   BACKUP_TARGET         set the backup target location
-  BACKUP_LINK_DIR       set the directory for '-L'
+  BACKUP_LINK_DIR       set the directory for '-L' and enable
   BACKUP_MOUNT          if set, automatically mount the specified UUID to '/mnt'
                           (do not use if your system already automounts)
 
@@ -191,7 +191,7 @@ if [ "$BACKUP_MOUNT" ]; then
         info "Mounted '$BACKUP_MOUNT' to '/mnt'"
     else
         err "Could not mount '$BACKUP_MOUNT'"
-        printf '%s\n' "The drive may be inaccessible; try 'mount \"$BACKUP_MOUNT\"' to check"
+        printf '%s\n' "The drive may be inaccessible; try 'mount \"$BACKUP_MOUNT\" /mnt' to check"
     fi
 fi
 
@@ -221,7 +221,8 @@ fi
 
 if [ "$target_source" ]; then
     target_target="$(df --output=target "$target" | tail -n 1)"
-    target_model="$(lsblk -no MODEL "/dev/$(lsblk -no PKNAME "$target_source")")"
+    # TODO: maybe use drive label instead of model
+    target_model="$(lsblk -no MODEL "$target_source")"
 fi
 
 if [ -e "$origin" ]; then
@@ -268,6 +269,8 @@ if [ -z $skip_check ]; then
     check_space ()
     {
         # succeed if not enough space
+
+        # Not very accurate if link directory option is used
         [ $(df --output=used -k "$origin" | tail -n 1) \
         -gt $(df --output=size -k "$target" | tail -n 1) ]
     }
@@ -429,10 +432,8 @@ if [ "$log" ]; then
 
     while kill -0 $rsync_pid 2> /dev/null; do
         for c in '   ' '.  ' '.. ' '...'; do
-            printf '%b%binfo:%b %s %s'      \
+            printf '%b%s %s'                \
             "$clear_line"                   \
-            "$bold_blue"                    \
-            "$normal"                       \
             "Backup in progress$c"          \
             "($(file_count) files copied)"
             sleep 0.5
@@ -451,7 +452,9 @@ if [ "$log" ]; then
         exit 3
     fi
 else
-    if ! back; then
+    if back; then
+        clean; exit
+    else
         exit 3
     fi
 fi

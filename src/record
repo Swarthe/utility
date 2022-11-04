@@ -3,7 +3,7 @@
 # record: Record or capture any combination of audio, display and camera using
 #         ffmpeg and mpv
 #
-# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
+# Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
@@ -17,7 +17,7 @@
 # add support for recording display with no audio (individual OPTARG management
 # for options)
 #
-# many problems with this script; fix
+# many problems with this script, especially options/usage; fix
 #
 
 #
@@ -49,6 +49,8 @@ Example: record -d+m
 
 Environment variables:
   UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
+
+Note: Press 'q' to stop recording through FFmpeg.
 EOF
 }
 
@@ -102,7 +104,6 @@ while getopts :hd:cmf:g: opt; do
         opt_count=$(($opt_count + 1))
         ;;
     c)
-        # mpv can take pictures from camera feed
         type='c'
         opt_count=$(($opt_count + 1))
         ;;
@@ -173,7 +174,7 @@ elif [ $opt_count -ne 1 ]; then
 fi
 
 # Determine whether or not to use graphical output
-if [ -z $graphical ] && [ "$graphical" != 0 ]; then
+if [ -z "$graphical" ] && [ "$DISPLAY" ]; then
     [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
 else
     [ "$graphical" = 0 ] && graphical=''

@@ -2,7 +2,7 @@
 #
 # vimg: Display images with optional interactivity using feh
 #
-# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
+# Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
@@ -24,8 +24,7 @@ Display images.
 Options:
   -i    display an interactive index of images
   -l    output a static list of files and metadata
-  -e    perform basic image editing (press '<', '>', '|', and '_' to mirror or
-          rotate)
+  -e    perform basic image editing (press '<', '>', '|', '_' to mirror/rotate)
   -r    operate recursively
   -h    display this help text
 

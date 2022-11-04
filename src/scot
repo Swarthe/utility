@@ -9,7 +9,7 @@
 #   bindsym $mod+$sup+s exec --no-startup-id scot -d
 #   bindsym $mod+$sup+Shift+s exec --no-startup-id scot -df
 #
-# Copyright (c) 2021 Emil Overbeck <https://github.com/Swarthe>
+# Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
 #
@@ -40,7 +40,7 @@ Capture the display.
 
 Options:
   -d    capture the entire display
-  -t    capture to file in '\$SCOT_TARGET'
+  -f    capture to file in '\$SCOT_TARGET'
   -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
           (overrides '\$UTILITY_GRAPHICAL')
   -h    display this help text
@@ -51,8 +51,8 @@ Environment variables:
   SCOT_TARGET           set the target directory for '-f'
   UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 
-Note: By default, a rectangular selection is captured, and in the current
-        working directory if '-f' is passed.
+Note: By default, a rectangular selection is captured or a window if clicked,
+        and in the current working directory if '-f' is passed.
 EOF
 }
 
@@ -139,7 +139,7 @@ if [ "$args" ]; then
 fi
 
 # Determine whether or not to use graphical output
-if [ -z $graphical ] && [ "$graphical" != 0 ]; then
+if [ -z "$graphical" ] && [ "$DISPLAY" ]; then
     [ "$UTILITY_GRAPHICAL" = 1 ] && graphical=1
 else
     [ "$graphical" = 0 ] && graphical=''
@@ -159,15 +159,17 @@ if [ "$target" ]; then
     done
 
     if [ "$display" ]; then
-        import -window root "$real_target" 2> /dev/null
+        import -window root "$real_target" &> /dev/null
     else
-        import "$real_target" 2> /dev/null
+        import "$real_target" &> /dev/null
     fi
 else
     if [ "$display" ]; then
-        import -window root png:- | xclip -selection clipboard -t image/png
+        import -window root png:- 2> /dev/null \
+        | xclip -selection clipboard -t image/png
     else
-        import png:- | xclip -selection clipboard -t image/png
+        import png:- 2> /dev/null \
+        | xclip -selection clipboard -t image/png
     fi
 
 fi

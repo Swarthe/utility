@@ -19,7 +19,6 @@ sudo make install
 To update:
 
 ```
-cd utility
 git pull origin
 sudo make install
 ```
@@ -27,7 +26,6 @@ sudo make install
 To uninstall:
 
 ```
-cd utility
 sudo make uninstall
 ```
 
