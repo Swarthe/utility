@@ -34,7 +34,7 @@ Options:
   -a    download media as audio with a thumbnail
   -c    prepend the creator's name to the filename
   -i    prepend playlist media index to the filename
-  -n    prepend album name to the filename
+  -A    prepend album name to the filename
   -t    specify the target directory for the download
   -g    specify 'on' to enable graphical user I/O; specify 'off' to disable
           (overrides '\$UTILITY_GRAPHICAL')
@@ -70,7 +70,7 @@ ginfo ()
 # Handle arguments
 #
 
-while getopts :ht:acing: opt; do
+while getopts :ht:aciAg: opt; do
     case "${opt}" in
     h)
         usage; exit
@@ -88,7 +88,7 @@ while getopts :ht:acing: opt; do
     i)
         index="%(playlist_index)s. "
         ;;
-    n)
+    A)
         album="%(album)s - "
         ;;
     g)
@@ -135,7 +135,8 @@ if [ -z "$file_format" ]; then
 fi
 
 # Construct yt-dlp options
-ydl_options=('--embed-thumbnail' '--add-metadata' "${file_format[@]}"
+ydl_options=('--embed-thumbnail' '--add-metadata' "${file_format[@]}" \
+             '--cookies-from-browser' "$BROWSER" \
              '-o' "${target}${creator}${album}${index}%(title)s.%(ext)s")
 
 # Exit immediately on SIGINT to avoid announcing failure when the user intended
