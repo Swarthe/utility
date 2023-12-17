@@ -40,8 +40,8 @@ Options:
   -t    specify the backup target location (overrides '\$BACKUP_TARGET')
   -o    specify the backup origin location (useful to recover backups)
   -L    specify directory from which to hardlink identical files to target;
-         useful for saving disk space with multiple backups on one drive
-         (overrides '\$BACKUP_LINK_DIR')
+         useful for saving disk space with multiple similar backups on one
+         drive (overrides '\$BACKUP_LINK_DIR')
   -s    specify what safety features to skip (use at your own peril); 'prompt'
           to skip prompts, 'check' to skip checks, 'all' to skip everything
   -h    display this help text

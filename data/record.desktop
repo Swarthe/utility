@@ -1,7 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Camera
-GenericName=Picture taker
 Comment=Take a picture by pressing <s>
 Exec=record -c
 Icon=/usr/share/icons/Papirus-Dark/32x32/devices/camera-photo.svg
