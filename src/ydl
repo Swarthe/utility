@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
 #
-# ydl: Download video or audio media from the internet with metadata in an
-#      organised fashion using youtube-dl
+# ydl: Download video or audio from the internet with metadata using youtube-dl
 #
 # Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
 # Subject to the MIT License. See LICENSE.txt for more information.
-#
-
-# TODO
-#
-# maybe maybe add env variables for default target (transient for us) and
-# creator setting and other
-#
-# maybe add option for youtube-dl 'ytsearch'
 #
 
 #
@@ -27,11 +18,11 @@ readonly bold_red="${bold}$(tput setaf 1)"
 usage ()
 {
     cat << EOF
-Usage: ydl [OPTION]... [-t] [TARGET] [URL]...
-Download video or audio media form the internet.
+Usage: ydl [OPTION]... [-t] [TARGET] [URL|NAME]...
+Download video or audio from the internet.
 
 Options:
-  -a    download media as audio with a thumbnail
+  -a    download media as audio
   -c    prepend the creator's name to the filename
   -i    prepend playlist media index to the filename
   -A    prepend album name to the filename
@@ -45,7 +36,8 @@ Example: ydl -ct ~/video [URL]
 Environment variables:
   UTILITY_GRAPHICAL     set to '1' to enable graphical user I/O
 
-Note: Media is downloaded as video in current working directory by default.
+Note: The download arguments can either be URLs or search strings.
+      Media is downloaded as video in current working directory by default.
 EOF
 }
 
@@ -76,7 +68,7 @@ while getopts :ht:aciAg: opt; do
         usage; exit
         ;;
     t)
-        # add leading slash to avoid breaking yt-dlp
+        # add leading slash to avoid changing the filename
         target="${OPTARG}/"
         ;;
     a)
@@ -128,14 +120,15 @@ fi
 # Run the download
 #
 
-# Default yt-dlp options for video
+# Default yt-dlp options for video, if not set for audio
 # yt-dlp cannot embed subtitles in audio files
 if [ -z "$file_format" ]; then
     file_format=('--embed-subs' '--all-subs')
 fi
 
-# Construct yt-dlp options
 ydl_options=('--embed-thumbnail' '--add-metadata' "${file_format[@]}" \
+             '--embed-chapters' \
+             '--default-search' 'ytsearch'
              '--cookies-from-browser' "$BROWSER" \
              '-o' "${target}${creator}${album}${index}%(title)s.%(ext)s")
 
