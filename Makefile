@@ -1,22 +1,24 @@
 # look at <https://gist.github.come/postmodern/3224049>, especially for PKGBUILD
 
-NAME=utility
+SRCS      := src/*
+DESKS     := data/*
 
-SRCS  := `basename -a src/*`
-DESKS := `basename -a data/*`
+PREFIX    := /usr/local
+BINDIR    := $(PREFIX)/bin
+DESKDIR   := $(PREFIX)/share/applications
 
-PREFIX := /usr/local
+SRCNAMES  := `basename -a src/*`
+DESKNAMES := `basename -a data/*`
 
-SRCDIR  := $(PREFIX)/bin
-DESKDIR := $(PREFIX)/share/applications
+INSTALL   := install -vCDt
+UNINSTALL := rm
 
 install:
-	mkdir -p $(SRCDIR) $(DESKDIR)
-	for f in $(SRCS);  do cp src/$$f  $(SRCDIR);  done
-	for f in $(DESKS); do cp data/$$f $(DESKDIR); done
+	$(INSTALL) $(BINDIR) $(SRCS)
+	$(INSTALL) $(DESKDIR) $(DESKS)
 
 uninstall:
-	for f in $(SRCS);  do rm $(SRCDIR)/$$f;  done
-	for f in $(DESKS); do rm $(DESKDIR)/$$f; done
+	for f in $(SRCNAMES);  do $(UNINSTALL) $(BINDIR)/$$f;  done
+	for f in $(DESKNAMES); do $(UNINSTALL) $(DESKDIR)/$$f; done
 
 .PHONY: install uninstall
