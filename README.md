@@ -7,6 +7,7 @@ Scripts to simplify common CLI actions (in development).
 - `scot`    : Capture the display to clipboard or file.
 - `ydl`     : Download video or audio media from the internet with metadata.
 - `vimg`    : Display images with optional interactivity.
+- `bat`     : Show and control battery status.
 
 ## Installation
 
@@ -48,6 +49,7 @@ table below.
 | record      | ✓         | x            |
 | scot        | ✓         | x            |
 | vimg        | ✓         | -            |
+| bat         | ✓         | x            |
 
 More testing is needed for other systems, but all dependencies should be
 installed or available on GNU/Linux distributions.

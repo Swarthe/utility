@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+#
+# bat: Show and control battery status using power-profiles-daemon
+#
+# Copyright (C) 2024 Emil Overbeck <https://github.com/Swarthe>
+#
+# Subject to the MIT License. See LICENSE.txt for more information.
+#
+
+readonly normal="$(tput sgr0)"
+readonly bold_red="$(tput bold)$(tput setaf 1)"
+
+usage ()
+{
+    cat << EOF
+Usage: Usage: bat [COMMAND]
+Display images.
+
+Commands:
+  status        show extended battery status
+  mode [MODE]   show current mode or set specified mode
+  mode-list     list available modes
+  help, -h      display this help text
+
+Example: bat mode power-saver
+
+Note: By default, the battery level and charge status are shown
+EOF
+}
+
+err ()
+{
+    printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
+}
+
+# Accepts the expected number of arguments and arguments. Exits if check fails.
+check_arg_count ()
+{
+    local extra_index=$(($1 + 2))
+
+    if [ $(($# - 1)) -gt $1 ]; then
+        err "unexpected argument '${!extra_index}'" 
+        exit 1
+    fi
+}
+
+basic_status ()
+{
+    local level=$(cat /sys/class/power_supply/BAT0/capacity)
+    local charging=$(cat /sys/class/power_supply/BAT0/status)
+    echo "$level% $charging"
+}
+
+# Returns power draw in watts.
+power_draw ()
+{
+    # Some devices directly provide power draw in microwatts.
+    if [ -e /sys/class/power_supply/BAT0/power_now ]; then
+        awk '{print $1 / 10^6}' /sys/class/power_supply/BAT0/power_now
+    else
+        # Micro units
+        local amp=$(cat /sys/class/power_supply/BAT0/current_now)
+        local volt=$(cat /sys/class/power_supply/BAT0/voltage_now)
+        awk "BEGIN{print $amp * $volt / 10^12}"
+    fi
+}
+
+if [ $# = 0 ]; then
+    basic_status
+    exit
+fi
+
+case $1 in
+    help|-h)
+        usage
+        ;;
+    status)
+        check_arg_count 1 $@
+        basic_status
+        echo "Power draw: $(power_draw) W"
+        ;;
+    mode)
+        check_arg_count 2 $@
+
+        if [ $# = 2 ]; then
+            powerprofilesctl set $2
+        else
+            powerprofilesctl get
+        fi
+        ;;
+    mode-list)
+        check_arg_count 1 $@
+        powerprofilesctl list
+        ;;
+    *)
+        err "invalid argument '$1'"
+        echo "Try 'bat help' for more information."
+        exit 1
+esac
