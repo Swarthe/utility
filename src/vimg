@@ -13,7 +13,7 @@
 
 readonly normal="$(tput sgr0)"
 readonly bold="$(tput bold)"
-readonly bold_red="${bold}$(tput setaf 1)"
+readonly bold_red="${bold}$(tput setaf 9)"
 
 usage ()
 {

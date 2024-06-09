@@ -23,7 +23,7 @@
 readonly normal="$(tput sgr0)"
 readonly clear_line="$(tput cr && tput el)"
 readonly bold="$(tput bold)"
-readonly bold_red="${bold}$(tput setaf 1)"
+readonly bold_red="${bold}$(tput setaf 9)"
 readonly bold_yellow="${bold}$(tput setaf 3)"
 readonly bold_blue="${bold}$(tput setaf 4)"
 readonly bold_cyan="${bold}$(tput setaf 6)"

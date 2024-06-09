@@ -8,7 +8,7 @@
 #
 
 readonly normal="$(tput sgr0)"
-readonly bold_red="$(tput bold)$(tput setaf 1)"
+readonly bold_red="$(tput bold)$(tput setaf 9)"
 
 usage ()
 {
