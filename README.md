@@ -37,7 +37,6 @@ Manuals for every script can be displayed with the `-h` command-line option.
 ## Status
 
 - `backup` is a work-in-progress; much testing is required.
-- `record` desktop audio option recently broke for unknown reasons.
 
 Scripts are designed for GNU/Linux with \*nix portability in mind as per the
 table below.
@@ -55,5 +54,7 @@ More testing is needed for other systems, but all dependencies should be
 installed or available on GNU/Linux distributions.
 
 ## License
+
+Copyright (C) 2024 Emil Overbeck `<emil.a.overbeck at gmail dot com>`.
 
 Subject to the MIT license. See `LICENSE.txt` for more information.
