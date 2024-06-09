@@ -56,12 +56,12 @@ power_draw ()
 {
     # Some devices directly provide power draw in microwatts.
     if [ -e /sys/class/power_supply/BAT0/power_now ]; then
-        awk '{print $1 / 10^6}' /sys/class/power_supply/BAT0/power_now
+        awk '{print int($1 / 10^6)}' /sys/class/power_supply/BAT0/power_now
     else
         # Micro units
         local amp=$(cat /sys/class/power_supply/BAT0/current_now)
         local volt=$(cat /sys/class/power_supply/BAT0/voltage_now)
-        awk "BEGIN{print $amp * $volt / 10^12}"
+        awk "BEGIN{print int($amp * $volt / 10^12)}"
     fi
 }
 
