@@ -13,14 +13,14 @@ readonly bold_red="$(tput bold)$(tput setaf 9)"
 usage ()
 {
     cat << EOF
-Usage: Usage: bat [COMMAND]
-Display images.
+Usage: bat [COMMAND [ARG]]
+Show and control battery status.
 
 Commands:
-  status        show extended battery status
-  mode [MODE]   show current mode or set specified mode
-  mode-list     list available modes
-  help, -h      display this help text
+  status,    -s  show extended battery status
+  mode,      -m  show current mode or set specified mode
+  mode-list, -l  list available modes
+  help,      -h  display this help text
 
 Example: bat mode power-saver
 
@@ -74,12 +74,12 @@ case $1 in
     help|-h)
         usage
         ;;
-    status)
+    status|-s)
         check_arg_count 1 $@
         basic_status
         echo "Power draw: $(power_draw) W"
         ;;
-    mode)
+    mode|-m)
         check_arg_count 2 $@
 
         if [ $# = 2 ]; then
@@ -88,7 +88,7 @@ case $1 in
             powerprofilesctl get
         fi
         ;;
-    mode-list)
+    mode-list|-l)
         check_arg_count 1 $@
         powerprofilesctl list
         ;;
