@@ -46,8 +46,8 @@ check_arg_count ()
 
 basic_status ()
 {
-    local level=$(cat /sys/class/power_supply/BAT0/capacity)
-    local charging=$(cat /sys/class/power_supply/BAT0/status)
+    local level=$(cat /sys/class/power_supply/BAT1/capacity)
+    local charging=$(cat /sys/class/power_supply/BAT1/status)
     echo "$level% $charging"
 }
 
@@ -55,12 +55,12 @@ basic_status ()
 power_draw ()
 {
     # Some devices directly provide power draw in microwatts.
-    if [ -e /sys/class/power_supply/BAT0/power_now ]; then
-        awk '{print int($1 / 10^6)}' /sys/class/power_supply/BAT0/power_now
+    if [ -e /sys/class/power_supply/BAT1/power_now ]; then
+        awk '{print int($1 / 10^6)}' /sys/class/power_supply/BAT1/power_now
     else
         # Micro units
-        local amp=$(cat /sys/class/power_supply/BAT0/current_now)
-        local volt=$(cat /sys/class/power_supply/BAT0/voltage_now)
+        local amp=$(cat /sys/class/power_supply/BAT1/current_now)
+        local volt=$(cat /sys/class/power_supply/BAT1/voltage_now)
         awk "BEGIN{print int($amp * $volt / 10^12)}"
     fi
 }
