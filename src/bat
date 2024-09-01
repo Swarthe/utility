@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# bat: Show and control battery status using power-profiles-daemon
+# bat: Show and control battery status using power-profiles-daemon and asusctl
 #
 # Copyright (C) 2024 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -9,6 +9,7 @@
 
 readonly normal="$(tput sgr0)"
 readonly bold_red="$(tput bold)$(tput setaf 9)"
+readonly battery=/sys/class/power_supply/BAT1
 
 usage ()
 {
@@ -17,10 +18,10 @@ Usage: bat [COMMAND [ARG]]
 Show and control battery status.
 
 Commands:
-  status,    -s  show extended battery status
-  mode,      -m  show current mode or set specified mode
-  mode-list, -l  list available modes
-  help,      -h  display this help text
+  status, s     show extended battery status
+  mode,   m     show modes or set specified mode
+  limit,  l     show or set charge limit
+  help,   h     display this help text
 
 Example: bat mode power-saver
 
@@ -46,8 +47,8 @@ check_arg_count ()
 
 basic_status ()
 {
-    local level=$(cat /sys/class/power_supply/BAT1/capacity)
-    local charging=$(cat /sys/class/power_supply/BAT1/status)
+    local level=$(cat $battery/capacity)
+    local charging=$(cat $battery/status)
     echo "$level% $charging"
 }
 
@@ -56,13 +57,18 @@ power_draw ()
 {
     # Some devices directly provide power draw in microwatts.
     if [ -e /sys/class/power_supply/BAT1/power_now ]; then
-        awk '{print int($1 / 10^6)}' /sys/class/power_supply/BAT1/power_now
+        awk '{print int($1 / 10^6)}' $battery/power_now
     else
         # Micro units
-        local amp=$(cat /sys/class/power_supply/BAT1/current_now)
-        local volt=$(cat /sys/class/power_supply/BAT1/voltage_now)
+        local amp=$(cat $battery/current_now)
+        local volt=$(cat $battery/voltage_now)
         awk "BEGIN{print int($amp * $volt / 10^12)}"
     fi
+}
+
+charge_limit ()
+{
+    cat "$battery/charge_control_end_threshold"
 }
 
 if [ $# = 0 ]; then
@@ -71,26 +77,33 @@ if [ $# = 0 ]; then
 fi
 
 case $1 in
-    help|-h)
+    help|h)
         usage
         ;;
-    status|-s)
+    status|s)
         check_arg_count 1 $@
         basic_status
         echo "Power draw: $(power_draw) W"
+        echo "Charge limit: $(charge_limit)%"
+        echo "Mode: $(powerprofilesctl get)"
         ;;
-    mode|-m)
+    mode|m)
         check_arg_count 2 $@
 
         if [ $# = 2 ]; then
             powerprofilesctl set $2
         else
-            powerprofilesctl get
+            powerprofilesctl list
         fi
         ;;
-    mode-list|-l)
-        check_arg_count 1 $@
-        powerprofilesctl list
+    limit|l)
+        check_arg_count 2 $@
+
+        if [ $# = 2 ]; then
+            asusctl -c $2 > /dev/null
+        else
+            echo "$(charge_limit)%"
+        fi
         ;;
     *)
         err "invalid argument '$1'"
