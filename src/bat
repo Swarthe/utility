@@ -23,7 +23,10 @@ Commands:
   limit,  l     show or set charge limit
   help,   h     display this help text
 
-Example: bat mode power-saver
+Examples:
+    bat mode power-saver
+    bat mode next
+    bat limit 75
 
 Note: By default, the battery level and charge status are shown
 EOF
@@ -32,6 +35,13 @@ EOF
 err ()
 {
     printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
+}
+
+ginfo ()
+{
+    notify-send -i \
+        /usr/share/icons/Papirus-Dark/symbolic/status/power-profile-balanced-symbolic.svg \
+        'Power profiles' "$*"
 }
 
 # Accepts the expected number of arguments and arguments. Exits if check fails.
@@ -56,7 +66,7 @@ basic_status ()
 power_draw ()
 {
     # Some devices directly provide power draw in microwatts.
-    if [ -e /sys/class/power_supply/BAT1/power_now ]; then
+    if [ -e $battery/power_now ]; then
         awk '{print int($1 / 10^6)}' $battery/power_now
     else
         # Micro units
@@ -91,7 +101,16 @@ case $1 in
         check_arg_count 2 $@
 
         if [ $# = 2 ]; then
-            powerprofilesctl set $2
+            if [ $2 = next ]; then
+                asusctl profile -n > /dev/null
+            else
+                powerprofilesctl set $2
+            fi
+
+            [ "$UTILITY_GRAPHICAL" = 1 ] && {
+                sleep 2
+                ginfo "Profile set to $(powerprofilesctl get)"
+            } &
         else
             powerprofilesctl list
         fi
