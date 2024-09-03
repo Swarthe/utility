@@ -37,11 +37,23 @@ err ()
     printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
 }
 
-ginfo ()
+ginfo_profile ()
 {
-    notify-send -i \
-        /usr/share/icons/Papirus-Dark/symbolic/status/power-profile-balanced-symbolic.svg \
-        'Power profiles' "$*" -u low
+    profile=$(powerprofilesctl get)
+
+    case $profile in
+        performance)
+            icon=/usr/share/icons/Papirus-Dark/symbolic/status/power-profile-performance-symbolic.svg
+            ;;
+        balanced)
+            icon=/usr/share/icons/Papirus-Dark/symbolic/status/power-profile-balanced-symbolic.svg
+            ;;
+        power-saver)
+            icon=/usr/share/icons/Papirus-Dark/symbolic/status/power-profile-power-saver-symbolic.svg
+            ;;
+    esac
+
+    notify-send -i $icon -u low 'Power profiles' "Profile set to $profile"
 }
 
 # Accepts the expected number of arguments and arguments. Exits if check fails.
@@ -109,7 +121,7 @@ case $1 in
 
             [ "$UTILITY_GRAPHICAL" = 1 ] && {
                 sleep 2
-                ginfo "Profile set to $(powerprofilesctl get)"
+                ginfo_profile
             } &
         else
             powerprofilesctl list
