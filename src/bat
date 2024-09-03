@@ -24,9 +24,9 @@ Commands:
   help,   h     display this help text
 
 Examples:
-    bat mode power-saver
-    bat mode next
-    bat limit 75
+  bat mode power-saver
+  bat mode next
+  bat limit 75
 
 Note: By default, the battery level and charge status are shown
 EOF
@@ -41,7 +41,7 @@ ginfo ()
 {
     notify-send -i \
         /usr/share/icons/Papirus-Dark/symbolic/status/power-profile-balanced-symbolic.svg \
-        'Power profiles' "$*"
+        'Power profiles' "$*" -u low
 }
 
 # Accepts the expected number of arguments and arguments. Exits if check fails.
