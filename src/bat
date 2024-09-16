@@ -115,14 +115,14 @@ case $1 in
         if [ $# = 2 ]; then
             if [ $2 = next ]; then
                 asusctl profile -n > /dev/null
+
+                [ "$UTILITY_GRAPHICAL" = 1 ] && {
+                    sleep 2
+                    ginfo_profile
+                } &
             else
                 powerprofilesctl set $2
             fi
-
-            [ "$UTILITY_GRAPHICAL" = 1 ] && {
-                sleep 2
-                ginfo_profile
-            } &
         else
             powerprofilesctl list
         fi
