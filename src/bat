@@ -108,7 +108,7 @@ if [ $# = 0 ]; then
 fi
 
 case $1 in
-    help|h)
+    help|h|-h|--help)
         usage
         ;;
     status|s)
