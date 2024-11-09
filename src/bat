@@ -9,7 +9,12 @@
 
 readonly normal="$(tput sgr0)"
 readonly bold_red="$(tput bold)$(tput setaf 9)"
-readonly battery=/sys/class/power_supply/BAT1
+
+if [ -z $BAT_SYS_PATH ]; then
+    readonly battery=/sys/class/power_supply/BAT0
+else
+    readonly battery=$BAT_SYS_PATH
+fi
 
 usage ()
 {
@@ -27,6 +32,10 @@ Examples:
   bat mode power-saver
   bat mode next
   bat limit 75
+
+Environment variables:
+  BAT_SYS_PATH    the battery system path
+                    (default: /sys/class/power_supply/BAT0)
 
 Note: By default, the battery level and charge status are shown
 EOF
