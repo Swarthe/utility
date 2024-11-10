@@ -34,8 +34,11 @@ Examples:
   bat limit 75
 
 Environment variables:
-  BAT_SYS_PATH    the battery system path
-                    (default: /sys/class/power_supply/BAT0)
+  BAT_SYS_PATH      the battery system path
+                      (default: /sys/class/power_supply/BAT0)
+  BAT_MODE_LIMITS   if set, the charging limits to set for each mode
+                      (format: XXX:YYY:ZZZ for power-saver, balanced,
+                      performance respectively)
 
 Note: By default, the battery level and charge status are shown
 EOF
@@ -46,11 +49,15 @@ err ()
     printf '%berror:%b %s\n' "$bold_red" "$normal" "$*" >&2
 }
 
-ginfo_profile ()
+# Notifies user of passed power profile. Graphical if enabled
+info_mode ()
 {
-    profile=$(powerprofilesctl get)
+    if [ $UTILITY_GRAPHICAL != 1 ]; then
+        echo "Mode set to $1"
+        return
+    fi
 
-    case $profile in
+    case $1 in
         performance)
             icon=/usr/share/icons/Papirus-Dark/symbolic/status/power-profile-performance-symbolic.svg
             ;;
@@ -62,7 +69,7 @@ ginfo_profile ()
             ;;
     esac
 
-    notify-send -i $icon -u low 'Power profiles' "Profile set to $profile"
+    notify-send -i $icon -u low 'Power modes' "Mode set to $1"
 }
 
 # Accepts the expected number of arguments and arguments. Exits if check fails.
@@ -78,9 +85,7 @@ check_arg_count ()
 
 basic_status ()
 {
-    local level=$(cat $battery/capacity)
-    local charging=$(cat $battery/status)
-    echo "$level% $charging"
+    echo "$(cat $battery/capacity)% $(cat $battery/status)"
 }
 
 # Returns power draw in watts.
@@ -102,6 +107,46 @@ charge_limit ()
     cat "$battery/charge_control_end_threshold"
 }
 
+# Switches to the next power profile. Accepts current profile.
+next_mode ()
+{
+    case $1 in
+        performance) echo power-saver;;
+        balanced)    echo performance;;
+        power-saver) echo balanced;;
+    esac
+}
+
+# Sets passed power profile, and associated charge limits if enabled.
+set_mode ()
+{
+    powerprofilesctl set $1
+
+    if [ -n $BAT_MODE_LIMITS ]; then
+        case $1 in
+            power-saver) set_charge_limit ${BAT_MODE_LIMITS:0:3};;
+            balanced)    set_charge_limit ${BAT_MODE_LIMITS:4:3};;
+            performance) set_charge_limit ${BAT_MODE_LIMITS:8:3};;
+        esac
+    fi
+
+}
+
+# Shows current and available modes. Accepts current mode.
+list_modes ()
+{
+    case $1 in
+        performance) echo -e "* performance\n  balanced\n  power-saver";;
+        balanced)    echo -e "  performance\n* balanced\n  power-saver";;
+        power-saver) echo -e "  performance\n  balanced\n* power-saver";;
+    esac
+}
+
+set_charge_limit ()
+{
+    asusctl -c $1 > /dev/null
+}
+
 if [ $# = 0 ]; then
     basic_status
     exit
@@ -120,27 +165,25 @@ case $1 in
         ;;
     mode|m)
         check_arg_count 2 $@
+        readonly mode=$(powerprofilesctl get)
 
         if [ $# = 2 ]; then
             if [ $2 = next ]; then
-                asusctl profile -n > /dev/null
-
-                [ "$UTILITY_GRAPHICAL" = 1 ] && {
-                    sleep 2
-                    ginfo_profile
-                } &
+                readonly next=$(next_mode $mode)
+                set_mode $next
+                info_mode $next
             else
-                powerprofilesctl set $2
+                set_mode $2
             fi
         else
-            powerprofilesctl list
+            list_modes $mode
         fi
         ;;
     limit|l)
         check_arg_count 2 $@
 
         if [ $# = 2 ]; then
-            asusctl -c $2 > /dev/null
+            set_charge_limit $2
         else
             echo "$(charge_limit)%"
         fi
