@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ydl: Download video or audio from the internet with metadata using youtube-dl
+# ydl: Download video or audio from the internet with metadata using yt-dlp
 #
 # Copyright (C) 2021 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -18,7 +18,7 @@ readonly bold_red="${bold}$(tput setaf 9)"
 usage ()
 {
     cat << EOF
-Usage: ydl [OPTION]... [-t] [TARGET] [URL|NAME]...
+Usage: ydl [OPTION]... [-t] [TARGET] [URL|NAME|YT-DLP OPTION]...
 Download video or audio from the internet.
 
 Options:
@@ -129,7 +129,8 @@ fi
 ydl_options=('--embed-thumbnail' '--add-metadata' "${file_format[@]}" \
              '--embed-chapters' \
              '--default-search' 'ytsearch'
-             '--cookies-from-browser' "$BROWSER" \
+             # Recently broken
+             # '--cookies-from-browser' "$BROWSER" \
              '-o' "${target}${creator}${album}${index}%(title)s.%(ext)s")
 
 # Exit immediately on SIGINT to avoid announcing failure when the user intended
