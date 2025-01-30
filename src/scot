@@ -70,12 +70,13 @@ gerr ()
 {
     notify-send -i \
     /usr/share/icons/Papirus-Dark/32x32/apps/gnome-screenshot.svg \
-    -u critical 'scot' "$*"
+    -u critical 'Screenshot' "$*"
 }
 
 ginfo ()
 {
-    notify-send -i "$real_target" 'scot' "$*"
+    eval $(notify-send -i "$real_target" -A "xdg-open ${real_target}=Open" \
+    'Screenshot' "$*")
 }
 
 #
@@ -180,13 +181,13 @@ fi
 
 if [ $graphical ] && [ "$target" ]; then
     if [ -e "$real_target" ]; then
-        ginfo "Screenshot is '$real_target'"
+        ginfo "Saved as '$real_target'"
     else
         gerr "Could not save screenshot"
     fi
 elif [ "$target" ]; then
     if [ -e "$real_target" ]; then
-        info "Screenshot is '$real_target'"
+        info "Saved as '$real_target'"
     else
         err "Could not save screenshot"
     fi
