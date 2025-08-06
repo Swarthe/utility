@@ -127,7 +127,7 @@ if [ -z "$file_format" ]; then
 fi
 
 ydl_options=('--embed-thumbnail' '--add-metadata' "${file_format[@]}" \
-             '--embed-chapters' \
+             '--embed-chapters' '--no-windows-filenames' \
              '--default-search' 'ytsearch'
              # Recently broken
              # '--cookies-from-browser' "$BROWSER" \
