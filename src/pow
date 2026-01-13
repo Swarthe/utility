@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# bat: Show and control battery status using power-profiles-daemon and asusctl
+# pow: Show and control power status using power-profiles-daemon and asusctl
 #
 # Copyright (C) 2024 Emil Overbeck <https://github.com/Swarthe>
 #
@@ -10,33 +10,33 @@
 readonly normal="$(tput sgr0)"
 readonly bold_red="$(tput bold)$(tput setaf 9)"
 
-if [ -z $BAT_SYS_PATH ]; then
+if [ -z $POW_BAT_PATH ]; then
     readonly battery=/sys/class/power_supply/BAT0
 else
-    readonly battery=$BAT_SYS_PATH
+    readonly battery=$POW_BAT_PATH
 fi
 
 usage ()
 {
     cat << EOF
-Usage: bat [COMMAND [ARG]]
-Show and control battery status.
+Usage: pow [COMMAND [ARG]]
+Show and control power status.
 
 Commands:
-  status, s     show extended battery status
+  status, s     show extended power status
   mode,   m     show modes or set specified mode
   limit,  l     show or set charge limit
   help,   h     display this help text
 
 Examples:
-  bat mode power-saver
-  bat mode next
-  bat limit 75
+  pow mode power-saver
+  pow mode next
+  pow limit 75
 
 Environment variables:
-  BAT_SYS_PATH      the battery system path
+  POW_BAT_PATH      the battery system path
                       (default: /sys/class/power_supply/BAT0)
-  BAT_MODE_LIMITS   if set, the charging limits to set for each mode
+  POW_MODE_LIMITS   if set, the charging limits to set for each mode
                       (format: XXX:YYY:ZZZ for power-saver, balanced,
                       performance respectively)
 
@@ -122,11 +122,11 @@ set_mode ()
 {
     powerprofilesctl set $1
 
-    if [ -n $BAT_MODE_LIMITS ]; then
+    if [ -n $POW_MODE_LIMITS ]; then
         case $1 in
-            power-saver) set_charge_limit ${BAT_MODE_LIMITS:0:3};;
-            balanced)    set_charge_limit ${BAT_MODE_LIMITS:4:3};;
-            performance) set_charge_limit ${BAT_MODE_LIMITS:8:3};;
+            power-saver) set_charge_limit ${POW_MODE_LIMITS:0:3};;
+            balanced)    set_charge_limit ${POW_MODE_LIMITS:4:3};;
+            performance) set_charge_limit ${POW_MODE_LIMITS:8:3};;
         esac
     fi
 
@@ -190,6 +190,6 @@ case $1 in
         ;;
     *)
         err "invalid argument '$1'"
-        echo "Try 'bat help' for more information."
+        echo "Try 'pow help' for more information."
         exit 1
 esac
