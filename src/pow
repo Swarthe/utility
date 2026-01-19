@@ -122,7 +122,7 @@ set_mode ()
 {
     powerprofilesctl set $1
 
-    if [ -n $POW_MODE_LIMITS ]; then
+    if [ -n "$POW_MODE_LIMITS" ]; then
         case $1 in
             power-saver) set_charge_limit ${POW_MODE_LIMITS:0:3};;
             balanced)    set_charge_limit ${POW_MODE_LIMITS:4:3};;
@@ -144,7 +144,7 @@ list_modes ()
 
 set_charge_limit ()
 {
-    asusctl -c $1 > /dev/null
+    asusctl battery limit $1 > /dev/null
 }
 
 if [ $# = 0 ]; then
