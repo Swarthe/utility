@@ -2,6 +2,9 @@
 #
 # scot: Capture the display to clipboard or file using ImageMagick
 #
+# When saving as a file, a notification is produced that can be used for
+# dragging to a GUI target with 'dragon-drop'.
+#
 # An example configuration for i3 integration:
 #
 #   bindsym $mod+s --release exec --no-startup-id scot
@@ -75,8 +78,14 @@ gerr ()
 
 ginfo ()
 {
-    eval $(notify-send -i "$real_target" -A "xdg-open ${real_target}=Open" \
-    'Screenshot' "$*")
+    local action=$(dunstify -u low -i "$real_target" \
+        -A "default,Drag" \
+        -A "open,Open" \
+        'Screenshot' "$*")
+    case "$action" in
+    default) dragon-drop -x "${real_target}" ;;
+    open) xdg-open "${real_target}" ;;
+    esac
 }
 
 #
